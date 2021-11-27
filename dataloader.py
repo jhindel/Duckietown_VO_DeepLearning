@@ -33,8 +33,8 @@ def preprocess(img):
     height, width = 224, 224
     img = np.resize(img, (height, width, 3))
 
-    channelwise_mean = [0, 0, 0]  # [1.39663424e-05, 1.09073426e-05, 1.15871203e-05]
-    channelwise_stddev = [1, 1, 1]  # [0.00236842, 0.00190088, 0.00201849]
+    channelwise_mean = [0.4, 0.45, 0.2]  # [1.39663424e-05, 1.09073426e-05, 1.15871203e-05]
+    channelwise_stddev = [0.22, 0.21, 0.15]  # [0.00236842, 0.00190088, 0.00201849]
     # Subtract the mean R,G,B pixels
     img[:, :, 0] = ((img[:, :, 0] / 255.0) - channelwise_mean[0]) / (channelwise_stddev[0])
     img[:, :, 1] = ((img[:, :, 1] / 255.0) - channelwise_mean[1]) / (channelwise_stddev[1])

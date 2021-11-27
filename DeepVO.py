@@ -1,0 +1,114 @@
+class DeepVONet(nn.Module):
+
+    def __init__(self, i_row, i_col, dropout_p=0.5):
+
+        super(DeepVONet, self).__init__()
+
+        self.i_col = i_col
+        self.i_row = i_row
+        self.dropout_p = dropout_p
+
+        self.o_col = oc(oc(oc(oc(oc(oc(oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
+                                    3, 1, 2), 3, 1, 1), 3, 1, 2), 3, 1, 1), 3, 1, 2)
+        self.o_row = oc(oc(oc(oc(oc(oc(oc(oc(oc(self.i_row, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
+                                    3, 1, 2), 3, 1, 1), 3, 1, 2), 3, 1, 1), 3, 1, 2)
+
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3))
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+        self.conv3_1 = nn.Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv4 = nn.Conv2d(256, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.conv4_1 = nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv5 = nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+        self.conv5_1 = nn.Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+        self.conv6 = nn.Conv2d(512, 1024, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
+
+        # ReLU layer
+        self.relu = nn.ReLU(inplace=True)
+
+        # Batch normalization layers
+        self.bn1 = nn.BatchNorm2d(num_features=64, eps=1e-05, momentum=0.1, affine=True)
+        self.bn2 = nn.BatchNorm2d(num_features=128, eps=1e-05, momentum=0.1, affine=True)
+        self.bn3 = nn.BatchNorm2d(num_features=256, eps=1e-05, momentum=0.1, affine=True)
+        self.bn3_1 = nn.BatchNorm2d(num_features=256, eps=1e-05, momentum=0.1, affine=True)
+        self.bn4 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
+        self.bn4_1 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
+        self.bn5 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
+        self.bn5_1 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
+        self.bn6 = nn.BatchNorm2d(num_features=1024, eps=1e-05, momentum=0.1, affine=True)
+        # self.bn1d = nn.BatchNorm1d(num_features=100, eps=1e-05, momentum=0.1, affine=True)
+
+        # LSTM layers
+        self.lstm1 = nn.LSTMCell(self.o_col * self.o_row * 1024, 100)
+        self.lstm2 = nn.LSTMCell(100, 100)
+
+        # Linear layer
+        self.fc = nn.Linear(in_features=100, out_features=3)
+
+        # Dropout layers
+        self.dropout = nn.Dropout2d(p=0.8)
+        self.dropout_hidden = nn.Dropout(p=self.dropout_p)  # default p = 0.5
+
+        # Initialization of all linear, convolutional and BN layers, initialization of hidden states of LSTMs
+        self.apply(weights_init)
+        self.reset_hidden_states()
+
+    def reset_hidden_states(self, bsize=1, zero=True):
+
+        if zero == True:
+            self.hx1 = Variable(torch.zeros(bsize, 100))
+            self.cx1 = Variable(torch.zeros(bsize, 100))
+            self.hx2 = Variable(torch.zeros(bsize, 100))
+            self.cx2 = Variable(torch.zeros(bsize, 100))
+        else:
+            self.hx1 = Variable(self.hx1.data)
+            self.cx1 = Variable(self.cx1.data)
+            self.hx2 = Variable(self.hx2.data)
+            self.cx2 = Variable(self.cx2.data)
+
+        if next(self.parameters()).is_cuda == True:
+            self.hx1 = self.hx1.cuda()
+            self.cx1 = self.cx1.cuda()
+            self.hx2 = self.hx2.cuda()
+            self.cx2 = self.cx2.cuda()
+
+    def forward(self, x):
+
+        x = self.dropout(x)
+        x = self.bn1(self.conv1(x))
+        x = self.relu(x)
+        x = self.bn2(self.conv2(x))
+        x = self.relu(x)
+        x = self.bn3(self.conv3(x))
+        x = self.relu(x)
+        x = self.bn3_1(self.conv3_1(x))
+        x = self.relu(x)
+        x = self.bn4(self.conv4(x))
+        x = self.relu(x)
+        x = self.bn4_1(self.conv4_1(x))
+        x = self.relu(x)
+        x = self.bn5(self.conv5(x))
+        x = self.relu(x)
+        x = self.bn5_1(self.conv5_1(x))
+        x = self.relu(x)
+        x = self.bn6(self.conv6(x))
+
+        x = x.view(x.size(0), self.o_col * self.o_row * 1024)
+        x = self.dropout_hidden(x)
+
+        self.hx1, self.cx1 = self.lstm1(x, (self.hx1, self.cx1))
+
+        x = self.hx1
+        # x = self.bn1d(x)
+        x = self.dropout_hidden(x)
+
+        self.hx2, self.cx2 = self.lstm2(x, (self.hx2, self.cx2))
+
+        x = self.hx2
+        # x = self.bn1d(x)
+        x = self.dropout_hidden(x)
+
+        x = self.fc(x)
+
+        return x
