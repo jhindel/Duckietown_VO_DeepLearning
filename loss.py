@@ -16,10 +16,11 @@ def CTC_loss(estimated_relative_poses, relative_poses, alpha, beta):
 
     matrix_cum = np.prod(matrix_representation_next) # doesn't give correct result (check github CTCNet once back up)
 
-    CTC_loss = criterion(matrix_cum, estimated_relative_poses_startend)
+    relative_pos_cum = [matrix_cum.item((0, 2)), matrix_cum.item((1, 2)), np.sum[estimated_relative_poses[:, :, 2]]]
+
+    CTC_loss = criterion(relative_pos_cum, estimated_relative_poses_startend)
 
     return alpha*normal_loss + beta*CTC_loss
-
 
 def get_matrix_repr(relative_pose):
     return np.asarray([[np.cos(relative_pose[2]), -np.sin(relative_pose[2]), relative_pose[0]],
