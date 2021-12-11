@@ -1,6 +1,10 @@
+import wandb
 
 from src.dataset_split import train, val, test, test_dummy, train_dummy, val_dummy
 from src.main import hyperparamter_tuning, training_testing
+
+
+wandb.login()
 
 args ={"data_dir":("/Users/julia/Documents/UNI/Master/Montréal/AV/project/duckietown_visual_odometry/data/",),
     "train_split":(train_dummy,), "val_split":(val_dummy,), "test_split":(test_dummy,),

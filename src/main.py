@@ -2,6 +2,7 @@ import torch
 from itertools import product as cartProduct
 import pandas as pd
 import os
+import wandb
 
 from src.dataset import DuckietownDataset
 
@@ -12,6 +13,10 @@ from src.training import plot_test, plot_train_valid, train_model, test_model
 
 
 def training_testing(args, visualization=True):
+    # tell wandb to get started
+    with wandb.init(project="pytorch-demo", config=args):
+        # access all HPs through wandb.config, so logging matches execution!
+        args = wandb.config
 
     train_data = DuckietownDataset(args["train_split"], args)
     val_data = DuckietownDataset(args["val_split"], args)
@@ -40,6 +45,8 @@ def training_testing(args, visualization=True):
     best_model, logs, args_ = train_model(model, train_loader, val_loader, args)
     if visualization:
         plot_train_valid(logs, args_)
+
+    print(logs)
 
     test_loss, relative_poses_pred = test_model(best_model, test_loader, args)
     if visualization:

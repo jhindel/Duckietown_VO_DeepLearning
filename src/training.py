@@ -4,13 +4,14 @@ import pickle
 import time
 import matplotlib.pyplot as plt
 import numpy as np
+import wandb
 
 import torch
 from torch.autograd import Variable
 import os
 from tqdm.autonotebook import tqdm
-from src.utils import relative2absolute, extract_trajectories_end_predictions
-from src.loss import DeepVO_loss
+from src.utils import relative2absolute
+from src.loss import DeepVO_loss, criterion
 
 
 
@@ -23,6 +24,9 @@ def train_model(model, train_loader, val_loader, args):
     :param args: hyperparameters
     :return:
     """
+
+    # Tell wandb to watch what the model gets up to: gradients, weights, and more!
+    wandb.watch(model, criterion, log="all", log_freq=10)
 
     optimizer = torch.optim.Adagrad(model.parameters(), lr=args["lr"], weight_decay=args["weight_decay"])
 
