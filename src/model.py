@@ -82,6 +82,7 @@ class DeepVONet(nn.Module):
         self.apply(weights_init)
         self.reset_hidden_states()
 
+
     def reset_hidden_states(self, bsize=1, zero=True):
 
         if zero == True:

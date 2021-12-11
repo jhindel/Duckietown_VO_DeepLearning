@@ -9,11 +9,12 @@ import torch
 from torch.autograd import Variable
 import os
 from tqdm.autonotebook import tqdm
-from utils import relative2absolute, extract_trajectories_end_predictions
-from loss import DeepVO_loss
+from src.utils import relative2absolute, extract_trajectories_end_predictions
+from src.loss import DeepVO_loss
 
 
-def train(model, train_loader, val_loader, args):
+
+def train_model(model, train_loader, val_loader, args):
     """
 
     :param model: network architecture to be trained
@@ -61,6 +62,8 @@ def train(model, train_loader, val_loader, args):
 
             for batch_idx, (images_stacked, relative_pose_change) in enumerate(tqdm(data_loader)):
 
+                # print(batch_idx, images_stacked.shape, relative_pose_change.shape)
+
                 if torch.cuda.is_available():
                     images_stacked, relative_pose_change = images_stacked.cuda(), relative_pose_change.cuda()
 
@@ -68,8 +71,10 @@ def train(model, train_loader, val_loader, args):
                 images_stacked, relative_pose_change = Variable(images_stacked), Variable(relative_pose_change)
 
                 # Initialize with zeros the Variable containing estimated relative poses
-                relative_pose_change_pred = Variable(torch.zeros(relative_pose_change.shape))  # (batch_size, trajectory_length,3)
-                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0, 2)  # (trajectory_length, batch_size, 3)
+                relative_pose_change_pred = Variable(
+                    torch.zeros(relative_pose_change.shape))  # (batch_size, trajectory_length,3)
+                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0,
+                                                                              2)  # (trajectory_length, batch_size, 3)
 
                 if torch.cuda.is_available():
                     relative_pose_change_pred = relative_pose_change_pred.cuda()
@@ -77,11 +82,13 @@ def train(model, train_loader, val_loader, args):
                 # TODO check but should be done automatically
                 model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
                 # TODO check if can't vectorize it
-                for t in range(args["trajectory_length"]):
-                    relative_pose_change_pred = model(images_stacked[t])  # input (batch_size, 3, 64, 64), output (32, 3)
-                    relative_pose_change_pred[t] = relative_pose_change_pred  # (trajectory_length, batch_size, 3)
+                for t in range(len(images_stacked)):
+                    relative_pose_change_pred[t] = model(
+                        images_stacked[t])  # input (batch_size, 3, 64, 64), output (32, 3)
+                    # relative_pose_change_pred:(trajectory_length, batch_size, 3)
 
-                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
+                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0,
+                                                                              2)  # (batch_size, trajectory_length, 3)
 
                 loss = DeepVO_loss(relative_pose_change, relative_pose_change_pred, args["K"])
 
@@ -94,7 +101,6 @@ def train(model, train_loader, val_loader, args):
                 running_loss += loss.item()
                 nb_batch += 1
                 # print(nb_batch)
-
             epoch_loss = running_loss / nb_batch
             logs[phase + '_loss'].append(epoch_loss)
 
@@ -152,7 +158,14 @@ def train(model, train_loader, val_loader, args):
     return model, logs, args
 
 
-def test(model, test_loader, args):
+def test_model(model, test_loader, args):
+    """
+
+    :param model: best model to be tested
+    :param test_loader: test dataloader
+    :param args: hyperparameters
+    :return:
+    """
     trajectories_nb = len(test_loader)
 
     trajectories_pred = Variable(torch.zeros((trajectories_nb, args["trajectory_length"], 3)))
@@ -184,15 +197,15 @@ def test(model, test_loader, args):
         # Initialize hidden states of RNN to zero before predicting TODO check this (reset hidden state after each prediction)
         model.reset_hidden_states(bsize=1, zero=True)
 
-        for t in range(args["trajectory_length"]):
-            relative_pose_change_pred = model(images_stacked[t])  # input (1,3,64,64), output (1, 1, 3)
-            relative_pose_change_pred[t] = relative_pose_change_pred  # (trajectory_length, 1, 3)
+        for t in range(len(images_stacked)):
+            relative_pose_change_pred[t] = model(images_stacked[t])  # input (1,3,64,64), output (1, 1, 3)
+            # relative_pose_change_pred: (trajectory_length, 1, 3)
 
         relative_pose_change_pred = relative_pose_change_pred.permute(1, 0, 2)  # (1, trajectory_length, 3)
 
         trajectories_pred[batch_id] = relative_pose_change_pred
 
-    loss = DeepVO_loss(trajectories, trajectories_pred, args["K"]) # TODO divide by batch_size?
+    loss = DeepVO_loss(trajectories, trajectories_pred, args["K"])  # TODO divide by batch_size?
 
     print('{} loss: {:.4f}'.format('test', loss))
 
@@ -231,8 +244,9 @@ def plot_train_valid(logs, args):
     print(args)
 
 
+# TODO doesn't work so far
 def plot_test(test_data, relative_pose_change_pred, args):
-    absolute_poses = test_data.load_poses()
+    absolute_poses = test_data.get_absolute_poses()
     relative_pose_change_pred = extract_trajectories_end_predictions(relative_pose_change_pred,
                                                                      args["trajectory_length"])
     absolute_poses_pred = relative2absolute(relative_pose_change_pred, absolute_poses[0])
