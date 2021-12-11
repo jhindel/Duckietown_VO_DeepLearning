@@ -12,11 +12,11 @@ from src.model import DeepVONet
 from src.training import plot_test, plot_train_valid, train_model, test_model
 
 
-def training_testing(args, visualization=True):
+def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     # tell wandb to get started
-    with wandb.init(project="pytorch-demo", config=args):
-        # access all HPs through wandb.config, so logging matches execution!
-        args = wandb.config
+    run = wandb.init(project=wandb_project, entity="av_deepvo", name=wandb_name)
+    # access all HPs through wandb.config, so logging matches execution!
+    wandb.config = args
 
     train_data = DuckietownDataset(args["train_split"], args)
     val_data = DuckietownDataset(args["val_split"], args)
@@ -52,10 +52,12 @@ def training_testing(args, visualization=True):
     if visualization:
         plot_test(test_data, relative_poses_pred)
 
+    run.finish()
+
     return logs, test_loss.detach().numpy()
 
 
-def hyperparamter_tuning(args):
+def hyperparamter_tuning(args, wandb_project, visualization=False, wandb_name=None):
     hyper_parameter_combinations = list(
         cartProduct(*[args[param] for param in args.keys()]))
     hyper_parameter_set_list = [dict(zip(args.keys(), hyper_parameter_combinations[i])) for i in
@@ -64,7 +66,7 @@ def hyperparamter_tuning(args):
     evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['train_loss', 'val_loss', 'test_loss'])
     for i, hyper_parameter in enumerate(hyper_parameter_set_list):
         print('%s/%s:  %s' % (i, len(hyper_parameter_set_list), hyper_parameter))
-        results, test_loss = training_testing(hyper_parameter, visualization=False)
+        results, test_loss = training_testing(hyper_parameter, wandb_project, visualization=visualization, wandb_name=f"{wandb_name}_{i}")
         hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
                                 'test_loss': test_loss})
         evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)

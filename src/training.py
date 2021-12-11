@@ -14,7 +14,6 @@ from src.utils import relative2absolute
 from src.loss import DeepVO_loss, criterion
 
 
-
 def train_model(model, train_loader, val_loader, args):
     """
 
@@ -26,7 +25,7 @@ def train_model(model, train_loader, val_loader, args):
     """
 
     # Tell wandb to watch what the model gets up to: gradients, weights, and more!
-    wandb.watch(model, criterion, log="all", log_freq=10)
+    # wandb.watch(model, criterion, log="all", log_freq=10)
 
     optimizer = torch.optim.Adagrad(model.parameters(), lr=args["lr"], weight_decay=args["weight_decay"])
 
@@ -43,6 +42,8 @@ def train_model(model, train_loader, val_loader, args):
 
     best_model = copy.deepcopy(model.state_dict())
     best_loss = float("inf")
+
+    # TODO check if we can use pre-trained weights from KITTI
 
     for epoch in range(1, args["epochs"] + 1):
 
@@ -78,7 +79,7 @@ def train_model(model, train_loader, val_loader, args):
                 relative_pose_pred = Variable(
                     torch.zeros(relative_pose.shape))  # (batch_size, trajectory_length,3)
                 relative_pose_pred = relative_pose_pred.permute(1, 0,
-                                                                              2)  # (trajectory_length, batch_size, 3)
+                                                                2)  # (trajectory_length, batch_size, 3)
 
                 if torch.cuda.is_available():
                     relative_pose_pred = relative_pose_pred.cuda()
@@ -92,7 +93,7 @@ def train_model(model, train_loader, val_loader, args):
                     # relative_pose_pred:(trajectory_length, batch_size, 3)
 
                 relative_pose_pred = relative_pose_pred.permute(1, 0,
-                                                                              2)  # (batch_size, trajectory_length, 3)
+                                                                2)  # (batch_size, trajectory_length, 3)
 
                 loss = DeepVO_loss(relative_pose, relative_pose_pred, args["K"])
 
@@ -106,6 +107,7 @@ def train_model(model, train_loader, val_loader, args):
                 nb_batch += 1
                 # print(nb_batch)
             epoch_loss = running_loss / nb_batch
+            wandb.log({f"{phase}_loss": epoch_loss}, step=epoch)
             logs[phase + '_loss'].append(epoch_loss)
 
             if phase == 'train':
@@ -230,6 +232,8 @@ def test_model(model, test_loader, args):
     with open(filepath, "wb") as f:
         pickle.dump(trajectories_pred, f)
 
+    wandb.run.summary["test_loss"] = loss
+
     return loss, trajectories_pred
 
 
@@ -244,22 +248,23 @@ def plot_train_valid(logs, args):
 
     # Graphic
     print('\nGraphic:')
-    line_up, = plt.plot(list(range(1, trained_epochs + 1)), logs['train_loss'])
-    line_down, = plt.plot(list(range(1, trained_epochs + 1)), logs['val_loss'])
-    plt.legend([line_up, line_down], ['train', 'validation'])
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.axvline(x=best_epoch, color='k', linestyle=':')
+    fig, ax = plt.subplots()
+    line_up, = ax.plot(list(range(1, trained_epochs + 1)), logs['train_loss'])
+    line_down, = ax.plot(list(range(1, trained_epochs + 1)), logs['val_loss'])
+    ax.legend([line_up, line_down], ['train', 'validation'])
+    ax.set_ylabel('Loss')
+    ax.set_xlabel('Epoch')
+    ax.axvline(x=best_epoch, color='k', linestyle=':')
+    wandb.log({"full training graph": wandb.Image(fig)})
     plt.show()
-
-    print('\nArguments:')
-    print(args)
 
 
 def plot_test(test_data, relative_poses_pred):
+    fig, ax = plt.subplots()
     absolute_poses = test_data.get_absolute_poses().to_numpy()
     absolute_poses_pred = relative2absolute(relative_poses_pred, absolute_poses[0])
-    plt.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
-    plt.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
-    plt.legend()
+    ax.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
+    ax.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
+    fig.legend()
+    wandb.log({"trajectory": wandb.Image(fig)})
     plt.show()
