@@ -70,15 +70,3 @@ def relative2absolute(relative_poses, absolute_pose_0):
     absolute_poses[:, -1] = absolute_thetas
 
     return absolute_poses
-
-# TODO understand this method
-def extract_trajectories_end_predictions(predicted_relative_poses, traj_length):
-    n_best_predictions = predicted_relative_poses.shape[0] - 1 + traj_length
-    best_predicted_relative_poses = np.zeros((n_best_predictions, 3))
-
-    for i in range(traj_length):
-        best_predicted_relative_poses[i] = predicted_relative_poses[0][i]
-    for i in range(traj_length, n_best_predictions):
-        best_predicted_relative_poses[i] = predicted_relative_poses[i - traj_length + 1][traj_length - 1]
-
-    return best_predicted_relative_poses

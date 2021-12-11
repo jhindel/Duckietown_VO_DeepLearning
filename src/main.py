@@ -41,12 +41,11 @@ def training_testing(args, visualization=True):
     if visualization:
         plot_train_valid(logs, args_)
 
-    test_loss, predicted_test_relative_poses = test_model(best_model, test_loader, args)
+    test_loss, relative_poses_pred = test_model(best_model, test_loader, args)
     if visualization:
-        plot_test(test_data, predicted_test_relative_poses, args)
+        plot_test(test_data, relative_poses_pred)
 
-    # TODO figure out what to return
-    return logs
+    return logs, test_loss.detach().numpy()
 
 
 def hyperparamter_tuning(args):
@@ -55,10 +54,11 @@ def hyperparamter_tuning(args):
     hyper_parameter_set_list = [dict(zip(args.keys(), hyper_parameter_combinations[i])) for i in
                                 range(len(hyper_parameter_combinations))]
 
-    evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['val_loss', 'loss'])
+    evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['train_loss', 'val_loss', 'test_loss'])
     for i, hyper_parameter in enumerate(hyper_parameter_set_list):
         print('%s/%s:  %s' % (i, len(hyper_parameter_set_list), hyper_parameter))
-        results = training_testing(hyper_parameter, visualization=False)
-        hyper_parameter.update({'val_loss': results['loss'][-1], 'loss': results['loss'][-1]})
+        results, test_loss = training_testing(hyper_parameter, visualization=False)
+        hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
+                                'test_loss': test_loss})
         evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)
     evaluation_overview.to_csv('model_evaluation_all.csv')

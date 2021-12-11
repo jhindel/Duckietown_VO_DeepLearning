@@ -60,37 +60,37 @@ def train_model(model, train_loader, val_loader, args):
             running_loss = 0.0
             nb_batch = 0
 
-            for batch_idx, (images_stacked, relative_pose_change) in enumerate(tqdm(data_loader)):
+            for batch_idx, (images_stacked, relative_pose) in enumerate(tqdm(data_loader)):
 
-                # print(batch_idx, images_stacked.shape, relative_pose_change.shape)
+                # print(batch_idx, images_stacked.shape, relative_pose.shape)
 
                 if torch.cuda.is_available():
-                    images_stacked, relative_pose_change = images_stacked.cuda(), relative_pose_change.cuda()
+                    images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
 
                 images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
-                images_stacked, relative_pose_change = Variable(images_stacked), Variable(relative_pose_change)
+                images_stacked, relative_pose = Variable(images_stacked), Variable(relative_pose)
 
                 # Initialize with zeros the Variable containing estimated relative poses
-                relative_pose_change_pred = Variable(
-                    torch.zeros(relative_pose_change.shape))  # (batch_size, trajectory_length,3)
-                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0,
+                relative_pose_pred = Variable(
+                    torch.zeros(relative_pose.shape))  # (batch_size, trajectory_length,3)
+                relative_pose_pred = relative_pose_pred.permute(1, 0,
                                                                               2)  # (trajectory_length, batch_size, 3)
 
                 if torch.cuda.is_available():
-                    relative_pose_change_pred = relative_pose_change_pred.cuda()
+                    relative_pose_pred = relative_pose_pred.cuda()
 
                 # TODO check but should be done automatically
                 model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
                 # TODO check if can't vectorize it
                 for t in range(len(images_stacked)):
-                    relative_pose_change_pred[t] = model(
-                        images_stacked[t])  # input (batch_size, 3, 64, 64), output (32, 3)
-                    # relative_pose_change_pred:(trajectory_length, batch_size, 3)
+                    relative_pose_pred[t] = model(
+                        images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
+                    # relative_pose_pred:(trajectory_length, batch_size, 3)
 
-                relative_pose_change_pred = relative_pose_change_pred.permute(1, 0,
+                relative_pose_pred = relative_pose_pred.permute(1, 0,
                                                                               2)  # (batch_size, trajectory_length, 3)
 
-                loss = DeepVO_loss(relative_pose_change, relative_pose_change_pred, args["K"])
+                loss = DeepVO_loss(relative_pose, relative_pose_pred, args["K"])
 
                 # if phase is 'train', compute gradient and do optimizer step
                 if phase == 'train':
@@ -166,51 +166,59 @@ def test_model(model, test_loader, args):
     :param args: hyperparameters
     :return:
     """
-    trajectories_nb = len(test_loader)
 
+    print("TESTING")
+
+    # to save complete predicted trajectories
+    trajectories_nb = len(test_loader)
     trajectories_pred = Variable(torch.zeros((trajectories_nb, args["trajectory_length"], 3)))
     trajectories = Variable(torch.zeros((trajectories_nb, args["trajectory_length"], 3)))
 
     # For BN and dropout layers
     model.eval()
 
-    for batch_id, (images_stacked, relative_pose_change) in enumerate(tqdm(test_loader)):
-        # images_stacked.shape = (1,trajectory_length,3,64,64), relative_pose_change.shape = (1,trajectory_length,3)
+    for batch_id, (images_stacked, relative_pose) in enumerate(tqdm(test_loader)):
+        # images_stacked.shape = (1,trajectory_length,3,64,64), relative_pose.shape = (1,trajectory_length,3)
 
-        trajectories_pred[batch_id] = relative_pose_change
+        trajectories[batch_id] = relative_pose
 
         # Computation of estimated relative_pose
         if torch.cuda.is_available():
-            images_stacked, relative_pose_change = images_stacked.cuda(), relative_pose_change.cuda()
+            images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
 
-        images_stacked, relative_pose_change = Variable(images_stacked), Variable(relative_pose_change)
+        images_stacked, relative_pose = Variable(images_stacked), Variable(relative_pose)
 
-        # Initialize with zeros the Variable containing estimated relative_pose_change
-        relative_pose_change_pred = Variable(torch.zeros(relative_pose_change.shape))
-        relative_pose_change_pred = relative_pose_change_pred.permute(1, 0, 2)  # (trajectory_length,1,3)
+        # Initialize with zeros the Variable containing estimated relative_pose
+        relative_pose_pred = Variable(torch.zeros(relative_pose.shape))
+        relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (trajectory_length,batch_size,3)
 
         if torch.cuda.is_available():
-            relative_pose_change_pred = relative_pose_change_pred.cuda()
+            relative_pose_pred = relative_pose_pred.cuda()
 
-        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length,1,3,64,64)
+        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length,batch_size,3,64,64)
 
         # Initialize hidden states of RNN to zero before predicting TODO check this (reset hidden state after each prediction)
         model.reset_hidden_states(bsize=1, zero=True)
 
         for t in range(len(images_stacked)):
-            relative_pose_change_pred[t] = model(images_stacked[t])  # input (1,3,64,64), output (1, 1, 3)
-            # relative_pose_change_pred: (trajectory_length, 1, 3)
+            relative_pose_pred[t] = model(images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
+            # relative_pose_pred: (trajectory_length, batch_size, 3)
 
-        relative_pose_change_pred = relative_pose_change_pred.permute(1, 0, 2)  # (1, trajectory_length, 3)
+        relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
 
-        trajectories_pred[batch_id] = relative_pose_change_pred
+        # add to list of all predictions
+        trajectories_pred[batch_id] = relative_pose_pred
 
-    loss = DeepVO_loss(trajectories, trajectories_pred, args["K"])  # TODO divide by batch_size?
+    # calculate loss of all predictions
+    loss = DeepVO_loss(trajectories, trajectories_pred, args["K"])
 
     print('{} loss: {:.4f}'.format('test', loss))
 
     # Pickle test_data: trajectories_pred
+    # reshape all predicitions into array of size (batch_size * 3)
     trajectories_pred = np.asarray(trajectories_pred.data)
+    # print(trajectories_pred.shape)
+    trajectories_pred = trajectories_pred.reshape(-1, trajectories_pred.shape[-1])
     filename = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')) + \
                "_trajectories_estimated_relative_transformation.pkl"
     filepath = os.path.join(args["checkpoint_path"], filename)
@@ -234,7 +242,7 @@ def plot_train_valid(logs, args):
     print('\nGraphic:')
     line_up, = plt.plot(list(range(1, trained_epochs + 1)), logs['train_loss'])
     line_down, = plt.plot(list(range(1, trained_epochs + 1)), logs['val_loss'])
-    plt.legend([line_up, line_down], ['train', 'valid'])
+    plt.legend([line_up, line_down], ['train', 'validation'])
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.axvline(x=best_epoch, color='k', linestyle=':')
@@ -244,11 +252,10 @@ def plot_train_valid(logs, args):
     print(args)
 
 
-# TODO doesn't work so far
-def plot_test(test_data, relative_pose_change_pred, args):
-    absolute_poses = test_data.get_absolute_poses()
-    relative_pose_change_pred = extract_trajectories_end_predictions(relative_pose_change_pred,
-                                                                     args["trajectory_length"])
-    absolute_poses_pred = relative2absolute(relative_pose_change_pred, absolute_poses[0])
-    plt.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1])
-    plt.plot(absolute_poses[:, 0], absolute_poses[:, 1])
+def plot_test(test_data, relative_poses_pred):
+    absolute_poses = test_data.get_absolute_poses().to_numpy()
+    absolute_poses_pred = relative2absolute(relative_poses_pred, absolute_poses[0])
+    plt.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
+    plt.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
+    plt.legend()
+    plt.show()
