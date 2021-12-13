@@ -18,7 +18,7 @@ class DuckietownDataset(Dataset):
         for i in range(len(data_dic["filenames"])):
             # read .txt file
             gt_file = pd.read_fwf(args["data_dir"] + data_dic["filenames"][i])
-            # print(i, gt_file.shape)
+            print(i, data_dic["filenames"][i], gt_file.shape)
             # get list of all files in dir
             all_filenames_dir = sorted(next(walk(args["data_dir"] + data_dic["dir"][i]), (None, None, []))[2])
             full_path = np.array(
