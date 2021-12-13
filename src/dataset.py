@@ -18,11 +18,11 @@ class DuckietownDataset(Dataset):
         for i in range(len(data_dic["filenames"])):
             # read .txt file
             gt_file = pd.read_fwf(args["data_dir"] + data_dic["filenames"][i])
-            print(i, data_dic["filenames"][i], gt_file.shape)
             # get list of all files in dir
             all_filenames_dir = sorted(next(walk(args["data_dir"] + data_dic["dir"][i]), (None, None, []))[2])
             full_path = np.array(
                 [os.path.join(str(args["data_dir"] + data_dic["dir"][i]), xi) for xi in all_filenames_dir])
+            print(i, data_dic["filenames"][i], gt_file.shape, len(all_filenames_dir))
             gt_file["img"] = full_path
             # only use images with idx
             start_idx = data_dic["idx"][i][0]
