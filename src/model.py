@@ -65,7 +65,6 @@ class DeepVONet(nn.Module):
         self.bn5 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
         self.bn5_1 = nn.BatchNorm2d(num_features=512, eps=1e-05, momentum=0.1, affine=True)
         self.bn6 = nn.BatchNorm2d(num_features=1024, eps=1e-05, momentum=0.1, affine=True)
-        # self.bn1d = nn.BatchNorm1d(num_features=100, eps=1e-05, momentum=0.1, affine=True)
 
         # LSTM layers
         self.lstm1 = nn.LSTMCell(self.o_col * self.o_row * 1024, 100)
@@ -81,7 +80,6 @@ class DeepVONet(nn.Module):
         # Initialization of all linear, convolutional and BN layers, initialization of hidden states of LSTMs
         self.apply(weights_init)
         self.reset_hidden_states()
-
 
     def reset_hidden_states(self, bsize=1, zero=True):
 

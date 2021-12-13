@@ -77,6 +77,7 @@ class DuckietownDataset(Dataset):
             absolute_poses = np.vstack((pose1, pose2))
             rel_pose = absolute2relative(absolute_poses).squeeze()
 
+            # TODO images are pointwise added here
             images_stacked.append(np.concatenate([img1, img2], axis=1))  # trajectory_length * (3, 640, 640)
             rel_poses.append(rel_pose)
 

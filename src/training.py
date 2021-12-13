@@ -11,7 +11,7 @@ from torch.autograd import Variable
 import os
 from tqdm.autonotebook import tqdm
 from .utils import relative2absolute
-from .loss import DeepVO_loss, criterion
+from .loss import DeepVO_loss
 
 
 def train_model(model, train_loader, val_loader, args):
@@ -67,7 +67,7 @@ def train_model(model, train_loader, val_loader, args):
 
             for batch_idx, (images_stacked, relative_pose) in enumerate(tqdm(data_loader)):
 
-                # print(batch_idx, images_stacked.shape, relative_pose.shape)
+                print(batch_idx, images_stacked.shape, relative_pose.shape)
 
                 if torch.cuda.is_available():
                     images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
@@ -78,8 +78,7 @@ def train_model(model, train_loader, val_loader, args):
                 # Initialize with zeros the Variable containing estimated relative poses
                 relative_pose_pred = Variable(
                     torch.zeros(relative_pose.shape))  # (batch_size, trajectory_length,3)
-                relative_pose_pred = relative_pose_pred.permute(1, 0,
-                                                                2)  # (trajectory_length, batch_size, 3)
+                relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (trajectory_length, batch_size, 3)
 
                 if torch.cuda.is_available():
                     relative_pose_pred = relative_pose_pred.cuda()
@@ -160,6 +159,33 @@ def train_model(model, train_loader, val_loader, args):
                "_best_model_state_dict.pth"
     filepath = os.path.join(args["checkpoint_path"], filename)
     torch.save(state, filepath)
+
+    # convert model to onnx
+
+    # set the model to inference mode
+    model.eval()
+    model.reset_hidden_states(args["bsize"], zero=True)
+
+    x = torch.randn(args["bsize"], 3, args["resize"], args["resize"], requires_grad=False)
+    if torch.cuda.is_available():
+        x = x.cuda()
+
+    filename = os.path.join(args["checkpoint_path"],
+                            f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
+
+    # Export the model
+    torch.onnx.export(model,  # model being run
+                      x,  # model input (or a tuple for multiple inputs)
+                      filename,  # where to save the model (can be a file or file-like object)
+                      export_params=True,  # store the trained parameter weights inside the model file
+                      opset_version=10,  # the ONNX version to export the model to
+                      do_constant_folding=True,  # whether to execute constant folding for optimization
+                      input_names=['input'],  # the model's input names
+                      output_names=['output'],  # the model's output names
+                      dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
+                                    'output': {0: 'batch_size'}})
+
+    wandb.save(filename)
 
     return model, logs, args
 
