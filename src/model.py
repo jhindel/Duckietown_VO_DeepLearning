@@ -81,7 +81,7 @@ class DeepVONet(nn.Module):
         self.apply(weights_init)
         self.reset_hidden_states()
 
-    def reset_hidden_states(self, bsize=1, zero=True):
+    def reset_hidden_states(self, bsize=1, zero=True, cpu=False):
 
         if zero == True:
             self.hx1 = Variable(torch.zeros(bsize, 100))
@@ -99,6 +99,13 @@ class DeepVONet(nn.Module):
             self.cx1 = self.cx1.cuda()
             self.hx2 = self.hx2.cuda()
             self.cx2 = self.cx2.cuda()
+
+        if cpu:
+            self.hx1 = self.hx1.cpu()
+            self.cx1 = self.cx1.cpu()
+            self.hx2 = self.hx2.cpu()
+            self.cx2 = self.cx2.cpu()
+
 
     def forward(self, x):
 

@@ -81,7 +81,7 @@ def save_model_onnx(model, args):
 
     # set the model to inference mode
     model.eval()
-    model.reset_hidden_states(args["bsize"], zero=True)
+    model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
     model.to('cpu')
 
     x = torch.randn(args["bsize"], 3, args["resize"], args["resize"], requires_grad=False)
