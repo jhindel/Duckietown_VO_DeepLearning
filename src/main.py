@@ -4,12 +4,10 @@ import pandas as pd
 import os
 import wandb
 
-from src.dataset import DuckietownDataset
-
-
-from src.utils import human_format, count_parameters
-from src.model import DeepVONet
-from src.training import plot_test, plot_train_valid, train_model, test_model
+from .dataset import DuckietownDataset
+from .utils import human_format, count_parameters
+from .model import DeepVONet
+from .training import plot_test, plot_train_valid, train_model, test_model
 
 
 def training_testing(args, wandb_project, visualization=True, wandb_name=None):

@@ -10,8 +10,8 @@ import torch
 from torch.autograd import Variable
 import os
 from tqdm.autonotebook import tqdm
-from src.utils import relative2absolute
-from src.loss import DeepVO_loss, criterion
+from .utils import relative2absolute
+from .loss import DeepVO_loss, criterion
 
 
 def train_model(model, train_loader, val_loader, args):

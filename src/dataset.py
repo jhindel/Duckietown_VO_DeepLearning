@@ -5,9 +5,9 @@ import numpy as np
 from torchvision import transforms
 import pandas as pd
 from PIL import Image
-from src.utils import absolute2relative
+from .utils import absolute2relative
 
-from src.dataset_split import train_dummy, val_dummy, test_dummy
+from .dataset_split import train_dummy, val_dummy, test_dummy
 
 
 class DuckietownDataset(Dataset):
