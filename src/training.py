@@ -159,6 +159,7 @@ def train_model(model, train_loader, val_loader, args):
                "_best_model_state_dict.pth"
     filepath = os.path.join(args["checkpoint_path"], filename)
     torch.save(state, filepath)
+    wandb.save(filepath)
 
     return model, logs, args
 
@@ -202,7 +203,8 @@ def test_model(model, test_loader, args):
 
         images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length,batch_size,3,64,64)
 
-        # Initialize hidden states of RNN to zero before predicting TODO check this (reset hidden state after each prediction)
+        # Initialize hidden states of RNN to zero before predicting TODO check this (reset hidden state after each
+        #  prediction)
         model.reset_hidden_states(bsize=1, zero=True)
 
         for t in range(len(images_stacked)):
