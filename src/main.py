@@ -3,6 +3,8 @@ from itertools import product as cartProduct
 import pandas as pd
 import os
 import wandb
+import time
+import datetime
 
 from .dataset import DuckietownDataset
 from .utils import human_format, count_parameters
@@ -51,6 +53,8 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     if visualization:
         plot_test(test_data, relative_poses_pred)
 
+    save_model_onnx(best_model, args)
+
     run.finish()
 
     return logs, test_loss.detach().numpy()
@@ -70,3 +74,30 @@ def hyperparamter_tuning(args, wandb_project, visualization=False, wandb_name=No
                                 'test_loss': test_loss})
         evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)
     evaluation_overview.to_csv('model_evaluation_all.csv')
+
+
+def save_model_onnx(model, args):
+    # convert model to onnx
+
+    # set the model to inference mode
+    model.eval()
+    model.reset_hidden_states(args["bsize"], zero=True)
+    model.to('cpu')
+
+    x = torch.randn(args["bsize"], 3, args["resize"], args["resize"], requires_grad=False)
+
+    filename = os.path.join(args["checkpoint_path"],
+                            f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
+
+    # Export the model
+    torch.onnx.export(model,  # model being run
+                      x,  # model input (or a tuple for multiple inputs)
+                      filename,  # where to save the model (can be a file or file-like object)
+                      export_params=True,  # store the trained parameter weights inside the model file
+                      opset_version=12,  # the ONNX version to export the model to
+                      do_constant_folding=True,  # whether to execute constant folding for optimization
+                      input_names=['input'],  # the model's input names
+                      output_names=['output'],  # the model's output names
+                      dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
+                                    'output': {0: 'batch_size'}})
+    wandb.save(filename)
