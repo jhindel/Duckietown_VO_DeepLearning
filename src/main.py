@@ -12,9 +12,10 @@ from .training import plot_test, plot_train_valid, train_model, test_model
 
 def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     # tell wandb to get started
-    run = wandb.init(project=wandb_project, entity="av_deepvo", name=wandb_name)
+    run = wandb.init(project=wandb_project, entity="av_deepvo", name=wandb_name, config=args)
     # access all HPs through wandb.config, so logging matches execution!
-    wandb.config = args
+    # wandb.config = args
+    print(args)
 
     train_data = DuckietownDataset(args["train_split"], args)
     val_data = DuckietownDataset(args["val_split"], args)
