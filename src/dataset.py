@@ -64,7 +64,6 @@ class DuckietownDataset(Dataset):
         start_idx = idx * self.trajectory_length
         end_idx = (idx + 1) * self.trajectory_length
         for i in range(start_idx, end_idx):
-            print(i)
             # for first image load both
             if i == start_idx:
                 data1 = self.data.iloc[i][["x", "y", "theta_correct", "img"]]
