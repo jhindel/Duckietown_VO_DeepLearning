@@ -91,8 +91,7 @@ def train_model(model, train_loader, val_loader, args):
                         images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
                     # relative_pose_pred:(trajectory_length, batch_size, 3)
 
-                relative_pose_pred = relative_pose_pred.permute(1, 0,
-                                                                2)  # (batch_size, trajectory_length, 3)
+                relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
 
                 loss = DeepVO_loss(relative_pose, relative_pose_pred, args["K"])
 
