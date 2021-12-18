@@ -18,9 +18,8 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     # access all HPs through wandb.config, so logging matches execution!
     # wandb.config = args
     print(args)
-    # TODO wrong validation
     train_data = DuckietownDataset(args["train_split"], args)
-    val_data = DuckietownDataset(args["train_split"], args)
+    val_data = DuckietownDataset(args["val_split"], args)
     test_data = DuckietownDataset(args["test_split"], args)
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=args["bsize"], shuffle=True, drop_last=True)
