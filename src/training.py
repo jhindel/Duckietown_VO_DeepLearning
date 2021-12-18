@@ -125,8 +125,9 @@ def train_model(model, train_loader, val_loader, args):
         # save parameters after training for one specific epoch
         if epoch % 10 == 0:
             state = {'epoch': epoch, 'state_dict': model.state_dict()}
-            torch.save(state, os.path.join(args["checkpoint_path"], "checkpoint_{}.pth".format(epoch)))
-            wandb.save(state)
+            filepath = os.path.join(args["checkpoint_path"], "checkpoint_{}.pth".format(epoch))
+            torch.save(state, filepath)
+            wandb.save(filepath)
 
     time_elapsed = time.time() - since
 
