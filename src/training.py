@@ -67,8 +67,6 @@ def train_model(model, train_loader, val_loader, args):
 
             for batch_idx, (images_stacked, relative_pose) in enumerate(tqdm(data_loader)):
 
-                print(batch_idx, images_stacked.shape, relative_pose.shape)
-
                 if torch.cuda.is_available():
                     images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
 
@@ -128,6 +126,7 @@ def train_model(model, train_loader, val_loader, args):
         if epoch % 10 == 0:
             state = {'epoch': epoch, 'state_dict': model.state_dict()}
             torch.save(state, os.path.join(args["checkpoint_path"], "checkpoint_{}.pth".format(epoch)))
+            wandb.save(state)
 
     time_elapsed = time.time() - since
 

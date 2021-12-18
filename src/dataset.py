@@ -5,9 +5,12 @@ import numpy as np
 from torchvision import transforms
 import pandas as pd
 from PIL import Image
-from .utils import absolute2relative
+from src.utils import absolute2relative
+import matplotlib.pyplot as plt
 
-from .dataset_split import train_dummy, val_dummy, test_dummy
+from src.dataset_split import train_dummy, val_dummy, test_dummy
+
+pd.set_option("max_colwidth", None)
 
 
 class DuckietownDataset(Dataset):
@@ -40,8 +43,9 @@ class DuckietownDataset(Dataset):
         self.transform = transforms.Compose([
             transforms.Resize((args["resize"] // 2, args["resize"])),
             transforms.ToTensor(),
+            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
-            transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
+            # transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
         ])
         self.camera_correction = args["camera-correction"]
         print("final shape", self.data.shape, "batches", (len(self.data) - 1) // self.trajectory_length,
@@ -60,6 +64,7 @@ class DuckietownDataset(Dataset):
         start_idx = idx * self.trajectory_length
         end_idx = (idx + 1) * self.trajectory_length
         for i in range(start_idx, end_idx):
+            print(i)
             # for first image load both
             if i == start_idx:
                 data1 = self.data.iloc[i][["x", "y", "theta_correct", "img"]]
@@ -110,7 +115,13 @@ if __name__ == "__main__":
     # get some random training images
     dataiter = iter(test_loader)
 
-    for i in range(20):
-        data, rel_pos = dataiter.next()
-        print(data.shape, rel_pos.shape)
+    for i in range(5):
+        img_stacked, rel_pos = dataiter.next()
+        for i in img_stacked:
+            for j in i:
+                print(j.min(), j.max())
+                j = j.permute(1, 2, 0)
+                plt.imshow(j)
+                plt.show()
+        print(img_stacked.shape, rel_pos.shape)
         # break
