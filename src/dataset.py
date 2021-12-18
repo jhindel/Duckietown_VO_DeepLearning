@@ -43,7 +43,7 @@ class DuckietownDataset(Dataset):
         self.transform = transforms.Compose([
             transforms.Resize((args["resize"] // 2, args["resize"])),
             transforms.ToTensor(),
-            transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
+            # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
             # transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
         ])
