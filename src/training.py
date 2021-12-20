@@ -58,35 +58,37 @@ def train_model(model, train_loader, val_loader, args):
             if phase == 'train':
                 data_loader = train_loader
                 model.train()
+                optimizer.zero_grad()
             else:
                 data_loader = val_loader
                 model.eval()
 
             running_loss = 0.0
-            nb_batch = 0
 
             for batch_idx, (images_stacked, relative_pose) in enumerate(tqdm(data_loader)):
 
+                # Initialize with zeros the Variable containing estimated relative_pose
+                shape = (relative_pose.shape[1], relative_pose.shape[0],
+                         relative_pose.shape[2])  # (trajectory_length,batch_size,3)
                 if torch.cuda.is_available():
-                    images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
+                    relative_pose_pred = torch.zeros(shape, device="cuda")
+                    images_stacked, relative_pose = images_stacked.to("cuda"), relative_pose.to("cuda")
+                else:
+                    relative_pose_pred = torch.zeros(shape, device="cpu")
 
                 images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
-                images_stacked, relative_pose = Variable(images_stacked), Variable(relative_pose)
-
-                # Initialize with zeros the Variable containing estimated relative poses
-                relative_pose_pred = Variable(
-                    torch.zeros(relative_pose.shape))  # (batch_size, trajectory_length,3)
-                relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (trajectory_length, batch_size, 3)
-
-                if torch.cuda.is_available():
-                    relative_pose_pred = relative_pose_pred.cuda()
 
                 # TODO check but should be done automatically
                 model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
+
                 # TODO check if can't vectorize it
                 for t in range(len(images_stacked)):
-                    relative_pose_pred[t] = model(
-                        images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
+                    if phase == 'train':
+                        relative_pose_pred[t] = model(images_stacked[t])
+                    elif phase == 'val':
+                        with torch.no_grad():
+                            relative_pose_pred[t] = model(images_stacked[t])
+                    # input (batch_size, 3, 64, 64), output (batch_size, 3)
                     # relative_pose_pred:(trajectory_length, batch_size, 3)
 
                 relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
@@ -95,14 +97,12 @@ def train_model(model, train_loader, val_loader, args):
 
                 # if phase is 'train', compute gradient and do optimizer step
                 if phase == 'train':
-                    optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
+                    optimizer.zero_grad()
 
                 running_loss += loss.item()
-                nb_batch += 1
-                # print(nb_batch)
-            epoch_loss = running_loss / nb_batch
+            epoch_loss = running_loss / len(data_loader)
             wandb.log({f"{phase}_loss": epoch_loss}, step=epoch)
             logs[phase + '_loss'].append(epoch_loss)
 
@@ -176,8 +176,8 @@ def test_model(model, test_loader, args):
 
     # to save complete predicted trajectories
     trajectories_nb = len(test_loader)
-    trajectories_pred = Variable(torch.zeros((trajectories_nb, args["trajectory_length"], 3)))
-    trajectories = Variable(torch.zeros((trajectories_nb, args["trajectory_length"], 3)))
+    trajectories_pred = torch.zeros(trajectories_nb, args["trajectory_length"], 3)
+    trajectories = torch.zeros(trajectories_nb, args["trajectory_length"], 3)
 
     # For BN and dropout layers
     model.eval()
@@ -187,18 +187,13 @@ def test_model(model, test_loader, args):
 
         trajectories[batch_id] = relative_pose
 
-        # Computation of estimated relative_pose
-        if torch.cuda.is_available():
-            images_stacked, relative_pose = images_stacked.cuda(), relative_pose.cuda()
-
-        images_stacked, relative_pose = Variable(images_stacked), Variable(relative_pose)
-
         # Initialize with zeros the Variable containing estimated relative_pose
-        relative_pose_pred = Variable(torch.zeros(relative_pose.shape))
-        relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (trajectory_length,batch_size,3)
-
+        shape = (relative_pose.shape[1], relative_pose.shape[0], relative_pose.shape[2])  # (trajectory_length,batch_size,3)
         if torch.cuda.is_available():
-            relative_pose_pred = relative_pose_pred.cuda()
+            relative_pose_pred = torch.zeros(shape, device="cuda")
+            images_stacked, relative_pose = images_stacked.to("cuda"), relative_pose.to("cuda")
+        else:
+            relative_pose_pred = torch.zeros(shape, device="cpu")
 
         images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length,batch_size,3,64,64)
 
@@ -207,7 +202,8 @@ def test_model(model, test_loader, args):
         model.reset_hidden_states(bsize=1, zero=True)
 
         for t in range(len(images_stacked)):
-            relative_pose_pred[t] = model(images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
+            with torch.no_grad():
+                relative_pose_pred[t] = model(images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
             # relative_pose_pred: (trajectory_length, batch_size, 3)
 
         relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
