@@ -18,7 +18,7 @@ class DeepVONet(pl.LightningModule):
             self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
         self.args = args
         self.test_data = DuckietownDataset(self.args["test_split"], self.args)
-        self.trajectories = np.zeros(len(self.test_data))
+        self.trajectories = [None] * len(self.test_data)
 
     def forward(self, x):
         return self.architecture(x)
@@ -58,7 +58,7 @@ class DeepVONet(pl.LightningModule):
     def test_step(self, batch, batch_nb):
         loss, relative_pose_predicted = self.compute_loss(batch)
         self.log('test_loss', loss, on_step=False, on_epoch=True)
-        self.trajectories[batch_nb] = np.asarray(relative_pose_predicted.cpu().data)
+        self.trajectories[batch_nb] = np.array(relative_pose_predicted.cpu().data)
         return loss
 
     def configure_optimizers(self):

@@ -93,6 +93,8 @@ class DuckietownDataset(Dataset):
 
     def preprocess(self, img):
         # TODO add camera correction here
+        area = (0, 160, 640, 480)
+        img = img.crop(area)
         img = self.transform(img)
         return img
 
@@ -121,7 +123,9 @@ if __name__ == "__main__":
             for j in i:
                 print(j.min(), j.max())
                 j = j.permute(1, 2, 0)
-                plt.imshow(j)
+                plt.imshow(j[:, :, :3])
+                plt.show()
+                plt.imshow(j[:, :, 3:])
                 plt.show()
         print(img_stacked.shape, rel_pos.shape)
         # break

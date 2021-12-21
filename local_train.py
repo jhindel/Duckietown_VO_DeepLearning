@@ -19,7 +19,7 @@ if __name__ == '__main__':
            "model":"ConvNet", "train_split": train, "val_split": val, "test_split": test,
         "checkpoint_path":'./checkpoint', "checkpoint":None, "bsize":32, "lr":0.001,
         "weight_decay":1e-4, "trajectory_length":5, "dropout_p":0.5,
-        "resize":64, "K":100, "epochs":10, "patience":40, "camera-correction":True}
+        "resize":64, "K":100, "epochs":1, "patience":40, "camera-correction":True}
 
     training_testing(args, wandb_project="deepvo-lightning-trials", wandb_name="trial_runs")
 

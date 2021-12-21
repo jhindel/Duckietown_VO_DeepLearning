@@ -43,13 +43,13 @@ def training_testing(args, wandb_project, wandb_name=None):
             logger=wandb_logger,
             callbacks=checkpoint,
             max_epochs=args["epochs"],
-            log_every_n_steps=10,
-            progress_bar_refresh_rate=20
+            # log_every_n_steps=50,
+            # progress_bar_refresh_rate=2
         )
 
     model = DeepVONet(args)
     # log gradients, parameter histogram and model topology
-    wandb_logger.watch(model, log='all')
+    wandb_logger.watch(model)
 
     trainer.fit(model)
     print("------- Training Done! -------")
@@ -84,7 +84,7 @@ def save_model_onnx(model, args):
 
     # set the model to inference mode
     model.eval()
-    model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
+    # model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
     model.to('cpu')
 
     x = torch.randn(args["bsize"], 3, args["resize"], args["resize"], requires_grad=False)

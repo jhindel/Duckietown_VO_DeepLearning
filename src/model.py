@@ -160,8 +160,53 @@ class ConvLstmNet(nn.Module):
 
         return x
 
-
 class ConvNet(nn.Module):
+
+    def __init__(self, size, dropout):
+        super().__init__()
+        self.i_col = size
+        self.i_row = size
+        self.dropout_p = dropout
+
+
+        self.o_col = oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2)
+        self.o_row = oc(oc(oc(self.i_row, 7, 3, 2), 5, 2, 2), 3, 1, 2)
+
+        # Convolutional layers
+        self.conv1 = nn.Conv2d(6, 32, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3))
+        self.conv2 = nn.Conv2d(32, 64, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+        self.conv3 = nn.Conv2d(64, 128, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
+
+        # ReLU layer
+        self.relu = nn.ReLU(inplace=True)
+
+        # LSTM layers
+        self.dense = nn.Linear(in_features=self.o_col * self.o_row * 128, out_features=64)
+        self.dense2 = nn.Linear(in_features=64, out_features=3)
+
+        # Dropout layers
+        # self.dropout = nn.Dropout2d(p=0.8)
+        self.dropout_hidden = nn.Dropout(p=self.dropout_p)  # default p = 0.5
+
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.relu(x)
+        x = self.conv2(x)
+        x = self.relu(x)
+        x = self.conv3(x)
+        x = self.relu(x)
+
+        x = x.view(x.size(0), self.o_col * self.o_row * 128)
+        x = self.dropout_hidden(x)
+        x = self.relu(self.dense(x))
+        x = self.dropout_hidden(x)
+        x = self.dense2(x)
+
+        return x
+
+
+class ConvNet2(nn.Module):
 
     def __init__(self, size, dropout):
         super().__init__()

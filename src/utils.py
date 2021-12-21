@@ -73,9 +73,13 @@ def relative2absolute(relative_poses, absolute_pose_0):
 
     return absolute_poses
 
+
 def plot_test(test_data, relative_poses_pred):
     fig, ax = plt.subplots()
+    relative_poses_pred = np.asarray(relative_poses_pred)[:, 0, :, :]
+    relative_poses_pred = relative_poses_pred.reshape(relative_poses_pred.shape[0] * relative_poses_pred.shape[1], -1)
     absolute_poses = test_data.get_absolute_poses().to_numpy()
+    print(relative_poses_pred.shape)
     absolute_poses_pred = relative2absolute(relative_poses_pred, absolute_poses[0])
     ax.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
     ax.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
