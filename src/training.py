@@ -79,7 +79,7 @@ def train_model(model, train_loader, val_loader, args):
                 images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
 
                 # TODO check but should be done automatically
-                model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
+                model.reset_hidden_states(bsize=args["bsize"], zero=True, phase=phase)  # reset to 0 the hidden states of RNN
 
                 # TODO check if can't vectorize it
                 for t in range(len(images_stacked)):

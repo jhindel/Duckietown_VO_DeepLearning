@@ -5,10 +5,11 @@ import os
 import wandb
 import time
 import datetime
+import sys
 
 from .dataset import DuckietownDataset
 from .utils import human_format, count_parameters
-from .model import DeepVONet
+from .model import DeepVONet, DeepVONetConv
 from .training import plot_test, plot_train_valid, train_model, test_model
 
 
@@ -28,7 +29,13 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
 
     if not os.path.exists(args["checkpoint_path"]): os.makedirs(args["checkpoint_path"])
 
-    model = DeepVONet(args["resize"], args["resize"], args["dropout_p"])
+    if args["model"] == "DeepVO":
+        model = DeepVONet(args["resize"], args["resize"], args["dropout_p"])
+    elif args["model"] == "DeepVOConv":
+        model = DeepVONetConv(args["resize"], args["resize"], args["dropout_p"])
+    else:
+        print("model not defined")
+        sys.exit()
 
     print("Number of parameters:", human_format(count_parameters(model)))
     print("Number of parameter bytes:", human_format(32 * count_parameters(model)))
@@ -40,6 +47,7 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
         print("Running model with cuda")
 
     if args["checkpoint"] is not None:
+        print("loading old model")
         the_checkpoint = torch.load(args["checkpoint"])
         model.load_state_dict(the_checkpoint['state_dict'])
 

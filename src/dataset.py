@@ -41,7 +41,7 @@ class DuckietownDataset(Dataset):
 
         self.trajectory_length = args["trajectory_length"]
         self.transform = transforms.Compose([
-            transforms.Resize((args["resize"] // 2, args["resize"])),
+            transforms.Resize((args["resize"], args["resize"])),
             transforms.ToTensor(),
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
@@ -81,14 +81,15 @@ class DuckietownDataset(Dataset):
             absolute_poses = np.vstack((pose1, pose2))
             rel_pose = absolute2relative(absolute_poses).squeeze()
 
-            # TODO images are pointwise added here
-            images_stacked.append(np.concatenate([img1, img2], axis=1))  # trajectory_length * (3, 640, 640)
+            # axis=1: images are next to each other, axis=0: images are behind
+            images_stacked.append(np.concatenate([img1, img2], axis=0))  # trajectory_length * (3, 640, 640)
             rel_poses.append(rel_pose)
 
             data1 = data2
             img1 = img2
-
-        return np.asarray(images_stacked), np.asarray(rel_poses)
+        images_stacked = np.asarray(images_stacked)
+        rel_poses = np.asarray(rel_poses)
+        return images_stacked, rel_poses
 
     def preprocess(self, img):
         # TODO add camera correction here
