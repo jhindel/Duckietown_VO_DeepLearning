@@ -31,6 +31,7 @@ class DeepVONet(pl.LightningModule):
         shape = (relative_pose.shape[1], relative_pose.shape[0],
                  relative_pose.shape[2])  # (trajectory_length,batch_size,3)
         relative_pose_pred = torch.zeros(shape)
+        relative_pose_pred = relative_pose_pred.type_as(relative_pose)
         images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
 
         # TODO check if can vectorize it
