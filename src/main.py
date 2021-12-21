@@ -9,8 +9,9 @@ import sys
 
 from .dataset import DuckietownDataset
 from .utils import human_format, count_parameters
-from .model import DeepVONet, DeepVONetConv
+from .model import DeepVONet
 from .training import plot_test, plot_train_valid, train_model, test_model
+import pytorch_lightning as pl
 
 
 def training_testing(args, wandb_project, visualization=True, wandb_name=None):
@@ -30,9 +31,9 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     if not os.path.exists(args["checkpoint_path"]): os.makedirs(args["checkpoint_path"])
 
     if args["model"] == "DeepVO":
-        model = DeepVONet(args["resize"], args["resize"], args["dropout_p"])
+        model = ConvLstm(args["resize"], args["resize"], args["dropout_p"])
     elif args["model"] == "DeepVOConv":
-        model = DeepVONetConv(args["resize"], args["resize"], args["dropout_p"])
+        model = Conv(args["resize"], args["resize"], args["dropout_p"])
     else:
         print("model not defined")
         sys.exit()
@@ -66,6 +67,51 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
     run.finish()
 
     return logs, test_loss.detach().numpy()
+
+def training_testing2(args, wandb_project, visualization=True, wandb_name=None):
+    # experiment tracker (you need to sign in with your account)
+
+    wandb.require(experiment="service")
+
+    wandb_logger = pl.loggers.WandbLogger(
+            name=wandb_name,
+            log_model=True,  # save best model using checkpoint callback
+            project=wandb_project,
+            entity="av_deepvo",
+            config=args,
+        )
+
+    if os.environ.get("LOCAL_RANK", None) is None:
+        os.environ["EXP_LOG_DIR"] = wandb_logger.experiment.dir
+
+    # to save the best model on validation
+    checkpoint = pl.callbacks.ModelCheckpoint(
+            filename="best_model" + str(time.time()),
+            monitor="valid_loss",
+            save_top_k=1,
+            mode="max",
+            save_last=False,
+            save_weights_only=True,
+        )
+
+    trainer = pl.Trainer(
+            # accelerator="gpu",
+            strategy="ddp",
+            logger=wandb_logger,
+            callbacks=checkpoint,
+            max_epochs=args["epochs"],
+            log_every_n_steps=10
+        )
+
+    model = DeepVONet(args)
+    # log gradients, parameter histogram and model topology
+    wandb_logger.watch(model, log='all')
+
+    trainer.fit(model)
+    print("------- Training Done! -------")
+
+    print("------- Testing Begins! -------")
+    trainer.test(model)
 
 
 def hyperparamter_tuning(args, wandb_project, visualization=False, wandb_name=None):

@@ -7,6 +7,7 @@ import numpy as np
 import wandb
 
 import torch
+import pytorch_lightning as pl
 from torch.autograd import Variable
 import os
 from tqdm.autonotebook import tqdm
@@ -161,6 +162,7 @@ def train_model(model, train_loader, val_loader, args):
     wandb.save(filepath)
 
     return model, logs, args
+
 
 
 def test_model(model, test_loader, args):

@@ -1,9 +1,13 @@
 import torch
 import torch.nn as nn
 import math
+import wandb
 
 from torch.autograd import Variable
 from torch.nn.init import calculate_gain
+import pytorch_lightning as pl
+from .loss import DeepVO_loss
+from .dataset import DuckietownDataset
 
 
 # Count output size, given the input size, the kernel size, the padding and the stride
@@ -26,14 +30,79 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-class DeepVONet(nn.Module):
+class DeepVONet(pl.LightningModule):
 
-    def __init__(self, i_row, i_col, dropout_p=0.5):
+    def __init__(self, args):
+        super().__init__()
+        if args["model"] == "ConvNet":
+            self.architecture = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvLstmNet":
+            self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
+        self.args=args
+
+    def forward(self, x):
+        return self.architecture(x)
+
+    def compute_loss(self, batch):
+        images_stacked = batch[0]
+        relative_pose = batch[1]
+
+        # Initialize with zeros the Variable containing estimated relative_pose
+        shape = (relative_pose.shape[1], relative_pose.shape[0],
+                 relative_pose.shape[2])  # (trajectory_length,batch_size,3)
+        relative_pose_pred = torch.zeros(shape)
+        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
+
+        for t in range(len(images_stacked)):
+            # input (batch_size, 3, 64, 64), output (batch_size, 3)
+            # relative_pose_pred:(trajectory_length, batch_size, 3)
+            relative_pose_pred[t] = self(images_stacked[t])
+
+        relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
+
+        loss = DeepVO_loss(relative_pose, relative_pose_pred, self.args["K"])
+
+        return loss
+
+    def training_step(self, batch, batch_nb):
+        loss = self.compute_loss(batch)
+        self.log('train_loss', loss, on_step=False, on_epoch=True)
+        return loss
+
+    def validation_step(self, batch, batch_nb):
+        loss = self.compute_loss(batch)
+        self.log('valid_loss', loss, on_step=False, on_epoch=True)
+
+    def test_step(self, batch, batch_nb):
+        loss = self.compute_loss(batch)
+        self.log('test_loss', loss, on_step=False, on_epoch=True)
+
+        return {'test_results': loss}
+
+    def configure_optimizers(self):
+        return torch.optim.Adagrad(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
+
+    def train_dataloader(self):
+        train_data = DuckietownDataset(self.args["train_split"], self.args)
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=4, shuffle=True, drop_last=True)
+
+    def val_dataloader(self):
+        val_data = DuckietownDataset(self.args["val_split"], self.args)
+        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=4, shuffle=False, drop_last=True)
+
+    def test_dataloader(self):
+        test_data = DuckietownDataset(self.args["test_split"], self.args)
+        return torch.utils.data.DataLoader(test_data, batch_size=1, num_workers=4, shuffle=False, drop_last=True)
+
+
+class ConvLstmNet(nn.Module):
+
+    def __init__(self, size, dropout_p=0.5):
 
         super(DeepVONet, self).__init__()
 
-        self.i_col = i_col
-        self.i_row = i_row
+        self.i_col = size
+        self.i_row = size
         self.dropout_p = dropout_p
 
         self.o_col = oc(oc(oc(oc(oc(oc(oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
@@ -153,20 +222,20 @@ class DeepVONet(nn.Module):
 
         return x
 
-class DeepVONetConv(nn.Module):
 
-    def __init__(self, i_row, i_col, dropout_p=0.5):
+class ConvNet(nn.Module):
 
-        super(DeepVONetConv, self).__init__()
+    def __init__(self, size, dropout):
+        super().__init__()
+        self.i_col = size
+        self.i_row = size
+        self.dropout_p = dropout
 
-        self.i_col = i_col
-        self.i_row = i_row
-        self.dropout_p = dropout_p
 
         self.o_col = oc(oc(oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
-                                    3, 1, 2)
+                        3, 1, 2)
         self.o_row = oc(oc(oc(oc(oc(self.i_row, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
-                                    3, 1, 2)
+                        3, 1, 2)
 
         # Convolutional layers
         self.conv1 = nn.Conv2d(6, 32, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3))
@@ -183,21 +252,12 @@ class DeepVONetConv(nn.Module):
         self.dense2 = nn.Linear(in_features=256, out_features=64)
         self.dense3 = nn.Linear(in_features=64, out_features=3)
 
-
         # Dropout layers
         self.dropout = nn.Dropout2d(p=0.8)
         self.dropout_hidden = nn.Dropout(p=self.dropout_p)  # default p = 0.5
 
-        # Initialization of all linear, convolutional and BN layers, initialization of hidden states of LSTMs
-        # self.apply(weights_init)
-        # self.reset_hidden_states()
-
-    def reset_hidden_states(self, bsize, zero=True, phase='eval', cpu=False):
-        return
-
 
     def forward(self, x):
-
         x = self.dropout(x)
         x = self.conv1(x)
         x = self.relu(x)
@@ -218,3 +278,4 @@ class DeepVONetConv(nn.Module):
         x = self.dense3(x)
 
         return x
+
