@@ -17,6 +17,7 @@ def oc(inp, k, p, s):
 
 # Initialize neural network layers according to their type
 def weights_init(m):
+    # TODO pre-trained weights
     classname = m.__class__.__name__
 
     if classname.find('Conv') != -1:
@@ -30,76 +31,11 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-class DeepVONet(pl.LightningModule):
-
-    def __init__(self, args):
-        super().__init__()
-        if args["model"] == "ConvNet":
-            self.architecture = ConvNet(args["resize"], args["dropout_p"])
-        elif args["model"] == "ConvLstmNet":
-            self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
-        self.args=args
-
-    def forward(self, x):
-        return self.architecture(x)
-
-    def compute_loss(self, batch):
-        images_stacked = batch[0]
-        relative_pose = batch[1]
-
-        # Initialize with zeros the Variable containing estimated relative_pose
-        shape = (relative_pose.shape[1], relative_pose.shape[0],
-                 relative_pose.shape[2])  # (trajectory_length,batch_size,3)
-        relative_pose_pred = torch.zeros(shape)
-        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
-
-        for t in range(len(images_stacked)):
-            # input (batch_size, 3, 64, 64), output (batch_size, 3)
-            # relative_pose_pred:(trajectory_length, batch_size, 3)
-            relative_pose_pred[t] = self(images_stacked[t])
-
-        relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
-
-        loss = DeepVO_loss(relative_pose, relative_pose_pred, self.args["K"])
-
-        return loss
-
-    def training_step(self, batch, batch_nb):
-        loss = self.compute_loss(batch)
-        self.log('train_loss', loss, on_step=False, on_epoch=True)
-        return loss
-
-    def validation_step(self, batch, batch_nb):
-        loss = self.compute_loss(batch)
-        self.log('valid_loss', loss, on_step=False, on_epoch=True)
-
-    def test_step(self, batch, batch_nb):
-        loss = self.compute_loss(batch)
-        self.log('test_loss', loss, on_step=False, on_epoch=True)
-
-        return {'test_results': loss}
-
-    def configure_optimizers(self):
-        return torch.optim.Adagrad(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
-
-    def train_dataloader(self):
-        train_data = DuckietownDataset(self.args["train_split"], self.args)
-        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=4, shuffle=True, drop_last=True)
-
-    def val_dataloader(self):
-        val_data = DuckietownDataset(self.args["val_split"], self.args)
-        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=4, shuffle=False, drop_last=True)
-
-    def test_dataloader(self):
-        test_data = DuckietownDataset(self.args["test_split"], self.args)
-        return torch.utils.data.DataLoader(test_data, batch_size=1, num_workers=4, shuffle=False, drop_last=True)
-
-
 class ConvLstmNet(nn.Module):
 
     def __init__(self, size, dropout_p=0.5):
 
-        super(DeepVONet, self).__init__()
+        super().__init__()
 
         self.i_col = size
         self.i_row = size
@@ -150,6 +86,8 @@ class ConvLstmNet(nn.Module):
         self.apply(weights_init)
         self.reset_hidden_states()
 
+    # TODO check but should be done automatically
+    # model.reset_hidden_states(bsize=args["bsize"], zero=True, phase=phase)  # reset to 0 the hidden states of RNN
     def reset_hidden_states(self, bsize=1, zero=True, phase='eval', cpu=False):
 
         if zero == True:

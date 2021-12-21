@@ -1,4 +1,6 @@
 import numpy as np
+import wandb
+import matplotlib.pyplot as plt
 
 
 # Make large numbers readable
@@ -70,3 +72,13 @@ def relative2absolute(relative_poses, absolute_pose_0):
     absolute_poses[:, -1] = absolute_thetas
 
     return absolute_poses
+
+def plot_test(test_data, relative_poses_pred):
+    fig, ax = plt.subplots()
+    absolute_poses = test_data.get_absolute_poses().to_numpy()
+    absolute_poses_pred = relative2absolute(relative_poses_pred, absolute_poses[0])
+    ax.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
+    ax.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
+    fig.legend()
+    wandb.log({"trajectory": wandb.Image(fig)})
+    plt.show()

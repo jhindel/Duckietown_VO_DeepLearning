@@ -1,268 +1,79 @@
-import copy
-import datetime
-import pickle
-import time
-import matplotlib.pyplot as plt
-import numpy as np
-import wandb
 
+import numpy as np
 import torch
 import pytorch_lightning as pl
-from torch.autograd import Variable
-import os
-from tqdm.autonotebook import tqdm
-from .utils import relative2absolute
 from .loss import DeepVO_loss
+from .model import ConvNet, ConvLstmNet
+from .dataset import DuckietownDataset
 
+class DeepVONet(pl.LightningModule):
 
-def train_model(model, train_loader, val_loader, args):
-    """
+    # TODO patience
 
-    :param model: network architecture to be trained
-    :param train_loader: training loader
-    :param val_loader: validation loader
-    :param args: hyperparameters
-    :return:
-    """
+    def __init__(self, args):
+        super().__init__()
+        if args["model"] == "ConvNet":
+            self.architecture = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvLstmNet":
+            self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
+        self.args = args
+        self.test_data = DuckietownDataset(self.args["test_split"], self.args)
+        self.trajectories = np.zeros(len(self.test_data))
 
-    # Tell wandb to watch what the model gets up to: gradients, weights, and more!
-    # wandb.watch(model, criterion, log="all", log_freq=10)
+    def forward(self, x):
+        return self.architecture(x)
 
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=args["lr"], weight_decay=args["weight_decay"])
-
-    # kwargs = {'num_workers': 1, 'pin_memory': True} if torch.cuda.is_available() else {}
-
-    # Creating logs : dictionary of lists for train_loss, val_loss
-    logs = dict(train_loss=[], val_loss=[])
-
-    # Counting patience
-    count_patience = 0
-
-    # Training and validating on each epoch
-    since = time.time()
-
-    best_model = copy.deepcopy(model.state_dict())
-    best_loss = float("inf")
-
-    # TODO check if we can use pre-trained weights from KITTI
-
-    for epoch in range(1, args["epochs"] + 1):
-
-        if count_patience == args["patience"]:
-            break
-
-        print('Epoch {}/{}; '.format(epoch, args["epochs"]), end='')
-        # print('-' * 10)
-
-        for phase in ["train", "val"]:
-
-            if phase == 'train':
-                data_loader = train_loader
-                model.train()
-                optimizer.zero_grad()
-            else:
-                data_loader = val_loader
-                model.eval()
-
-            running_loss = 0.0
-
-            for batch_idx, (images_stacked, relative_pose) in enumerate(tqdm(data_loader)):
-
-                # Initialize with zeros the Variable containing estimated relative_pose
-                shape = (relative_pose.shape[1], relative_pose.shape[0],
-                         relative_pose.shape[2])  # (trajectory_length,batch_size,3)
-                if torch.cuda.is_available():
-                    relative_pose_pred = torch.zeros(shape, device="cuda")
-                    images_stacked, relative_pose = images_stacked.to("cuda"), relative_pose.to("cuda")
-                else:
-                    relative_pose_pred = torch.zeros(shape, device="cpu")
-
-                images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
-
-                # TODO check but should be done automatically
-                model.reset_hidden_states(bsize=args["bsize"], zero=True, phase=phase)  # reset to 0 the hidden states of RNN
-
-                # TODO check if can't vectorize it
-                for t in range(len(images_stacked)):
-                    if phase == 'train':
-                        relative_pose_pred[t] = model(images_stacked[t])
-                    elif phase == 'val':
-                        with torch.no_grad():
-                            relative_pose_pred[t] = model(images_stacked[t])
-                    # input (batch_size, 3, 64, 64), output (batch_size, 3)
-                    # relative_pose_pred:(trajectory_length, batch_size, 3)
-
-                relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
-
-                loss = DeepVO_loss(relative_pose, relative_pose_pred, args["K"])
-
-                # if phase is 'train', compute gradient and do optimizer step
-                if phase == 'train':
-                    loss.backward()
-                    optimizer.step()
-                    optimizer.zero_grad()
-
-                running_loss += loss.item()
-            epoch_loss = running_loss / len(data_loader)
-            wandb.log({f"{phase}_loss": epoch_loss}, step=epoch)
-            logs[phase + '_loss'].append(epoch_loss)
-
-            if phase == 'train':
-                print('{} loss, {:.4f}; '.format(phase, epoch_loss), end='')
-
-            # deep copy the model
-            if phase == 'val' and epoch_loss < best_loss:
-                best_loss = epoch_loss
-                best_model = copy.deepcopy(model.state_dict())
-                count_patience = 0
-                print('{} loss, {:.4f}.'.format(phase, epoch_loss))
-            elif phase == 'val' and args["patience"] is not None:
-                count_patience += 1
-                print('{} loss, {:.4f}; '.format(phase, epoch_loss), end='')
-                print("patience, {}.".format(count_patience))
-            elif phase == 'val' and args["patience"] is None:
-                print('{} loss, {:.4f}.'.format(phase, epoch_loss))
-
-        # save parameters after training for one specific epoch
-        if epoch % 10 == 0:
-            state = {'epoch': epoch, 'state_dict': model.state_dict()}
-            filepath = os.path.join(args["checkpoint_path"], "checkpoint_{}.pth".format(epoch))
-            torch.save(state, filepath)
-            wandb.save(filepath)
-
-    time_elapsed = time.time() - since
-
-    # determine number of trained epochs and best epoch
-    trained_epochs = len(logs['train_loss'])
-    if args["patience"] is not None and trained_epochs != args["epochs"]:
-        best_epoch = trained_epochs - args["patience"]
-    else:
-        best_epoch = np.argmin(logs['val_loss']) + 1
-    logs['trained_epochs'] = trained_epochs
-    logs['best_epoch'] = best_epoch
-
-    # print training time and best validation loss
-    print('\nTraining complete in {:.0f}m {:.0f}s.'.format(time_elapsed // 60, time_elapsed % 60))
-
-    # Pickle logs
-    filename = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')) + "_logs.pkl"
-    filepath = os.path.join(args["checkpoint_path"], filename)
-
-    with open(filepath, "wb") as f:
-        pickle.dump(logs, f)
-
-        # load best model weights
-    model.load_state_dict(best_model)
-
-    state = {'best_epoch': best_epoch, 'state_dict': best_model}
-    filename = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')) + \
-               "_best_model_state_dict.pth"
-    filepath = os.path.join(args["checkpoint_path"], filename)
-    torch.save(state, filepath)
-    wandb.save(filepath)
-
-    return model, logs, args
-
-
-
-def test_model(model, test_loader, args):
-    """
-
-    :param model: best model to be tested
-    :param test_loader: test dataloader
-    :param args: hyperparameters
-    :return:
-    """
-
-    print("TESTING")
-
-    # to save complete predicted trajectories
-    trajectories_nb = len(test_loader)
-    trajectories_pred = torch.zeros(trajectories_nb, args["trajectory_length"], 3)
-    trajectories = torch.zeros(trajectories_nb, args["trajectory_length"], 3)
-
-    # For BN and dropout layers
-    model.eval()
-
-    for batch_id, (images_stacked, relative_pose) in enumerate(tqdm(test_loader)):
-        # images_stacked.shape = (1,trajectory_length,3,64,64), relative_pose.shape = (1,trajectory_length,3)
-
-        trajectories[batch_id] = relative_pose
+    def compute_loss(self, batch):
+        images_stacked = batch[0]
+        relative_pose = batch[1]
 
         # Initialize with zeros the Variable containing estimated relative_pose
-        shape = (relative_pose.shape[1], relative_pose.shape[0], relative_pose.shape[2])  # (trajectory_length,batch_size,3)
-        if torch.cuda.is_available():
-            relative_pose_pred = torch.zeros(shape, device="cuda")
-            images_stacked, relative_pose = images_stacked.to("cuda"), relative_pose.to("cuda")
-        else:
-            relative_pose_pred = torch.zeros(shape, device="cpu")
+        shape = (relative_pose.shape[1], relative_pose.shape[0],
+                 relative_pose.shape[2])  # (trajectory_length,batch_size,3)
+        relative_pose_pred = torch.zeros(shape)
+        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
 
-        images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length,batch_size,3,64,64)
-
-        # Initialize hidden states of RNN to zero before predicting TODO check this (reset hidden state after each
-        #  prediction)
-        model.reset_hidden_states(bsize=1, zero=True)
-
+        # TODO check if can vectorize it
         for t in range(len(images_stacked)):
-            with torch.no_grad():
-                relative_pose_pred[t] = model(images_stacked[t])  # input (batch_size, 3, 64, 64), output (batch_size, 3)
-            # relative_pose_pred: (trajectory_length, batch_size, 3)
+            # input (batch_size, 3, 64, 64), output (batch_size, 3)
+            # relative_pose_pred:(trajectory_length, batch_size, 3)
+            relative_pose_pred[t] = self(images_stacked[t])
 
         relative_pose_pred = relative_pose_pred.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
 
-        # add to list of all predictions
-        trajectories_pred[batch_id] = relative_pose_pred
+        loss = DeepVO_loss(relative_pose, relative_pose_pred, self.args["K"])
 
-    # calculate loss of all predictions
-    loss = DeepVO_loss(trajectories, trajectories_pred, args["K"])
+        return loss, relative_pose_pred
 
-    print('{} loss: {:.4f}'.format('test', loss))
+    def training_step(self, batch, batch_nb):
+        loss, _ = self.compute_loss(batch)
+        self.log('train_loss', loss, on_step=False, on_epoch=True)
+        return loss
 
-    # Pickle test_data: trajectories_pred
-    # reshape all predicitions into array of size (batch_size * 3)
-    trajectories_pred = np.asarray(trajectories_pred.data)
-    # print(trajectories_pred.shape)
-    trajectories_pred = trajectories_pred.reshape(-1, trajectories_pred.shape[-1])
-    filename = str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')) + \
-               "_trajectories_estimated_relative_transformation.pkl"
-    filepath = os.path.join(args["checkpoint_path"], filename)
+    def validation_step(self, batch, batch_nb):
+        loss, _ = self.compute_loss(batch)
+        self.log('valid_loss', loss, on_step=False, on_epoch=True)
 
-    with open(filepath, "wb") as f:
-        pickle.dump(trajectories_pred, f)
+    def test_step(self, batch, batch_nb):
+        loss, relative_pose_predicted = self.compute_loss(batch)
+        self.log('test_loss', loss, on_step=False, on_epoch=True)
+        self.trajectories[batch_nb] = relative_pose_predicted
+        return loss
 
-    wandb.run.summary["test_loss"] = loss
+    def configure_optimizers(self):
+        return torch.optim.Adagrad(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
 
-    return loss, trajectories_pred
+    def train_dataloader(self):
+        train_data = DuckietownDataset(self.args["train_split"], self.args)
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=4, shuffle=True, drop_last=True)
 
+    def val_dataloader(self):
+        val_data = DuckietownDataset(self.args["val_split"], self.args)
+        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=4, shuffle=False, drop_last=True)
 
-def plot_train_valid(logs, args):
-    # number of trained epochs and best epoch
-    trained_epochs = logs['trained_epochs']
-    best_epoch = logs['best_epoch']
-
-    # Results summary
-    print('\nBest result at epoch %d; training loss, %.4f; validation loss, %.4f.' %
-          (best_epoch, logs['train_loss'][best_epoch - 1], logs['val_loss'][best_epoch - 1]))
-
-    # Graphic
-    print('\nGraphic:')
-    fig, ax = plt.subplots()
-    line_up, = ax.plot(list(range(1, trained_epochs + 1)), logs['train_loss'])
-    line_down, = ax.plot(list(range(1, trained_epochs + 1)), logs['val_loss'])
-    ax.legend([line_up, line_down], ['train', 'validation'])
-    ax.set_ylabel('Loss')
-    ax.set_xlabel('Epoch')
-    ax.axvline(x=best_epoch, color='k', linestyle=':')
-    wandb.log({"full training graph": wandb.Image(fig)})
-    plt.show()
+    def test_dataloader(self):
+        return torch.utils.data.DataLoader(self.test_data, batch_size=1, num_workers=4, shuffle=False, drop_last=True)
 
 
-def plot_test(test_data, relative_poses_pred):
-    fig, ax = plt.subplots()
-    absolute_poses = test_data.get_absolute_poses().to_numpy()
-    absolute_poses_pred = relative2absolute(relative_poses_pred, absolute_poses[0])
-    ax.plot(absolute_poses_pred[:, 0], absolute_poses_pred[:, 1], label='predicted trajectory')
-    ax.plot(absolute_poses[:, 0], absolute_poses[:, 1], label='ground truth trajectory')
-    fig.legend()
-    wandb.log({"trajectory": wandb.Image(fig)})
-    plt.show()
+
+
