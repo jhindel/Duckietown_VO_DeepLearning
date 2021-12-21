@@ -58,7 +58,7 @@ class DeepVONet(pl.LightningModule):
     def test_step(self, batch, batch_nb):
         loss, relative_pose_predicted = self.compute_loss(batch)
         self.log('test_loss', loss, on_step=False, on_epoch=True)
-        self.trajectories[batch_nb] = np.asarray(relative_pose_predicted.data)
+        self.trajectories[batch_nb] = np.asarray(relative_pose_predicted.cpu().data)
         return loss
 
     def configure_optimizers(self):
