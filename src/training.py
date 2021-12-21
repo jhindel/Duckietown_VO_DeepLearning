@@ -62,11 +62,11 @@ class DeepVONet(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return torch.optim.Adagrad(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
+        return torch.optim.Adam(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
 
     def train_dataloader(self):
         train_data = DuckietownDataset(self.args["train_split"], self.args)
-        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True, drop_last=True)
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False, drop_last=True)
 
     def val_dataloader(self):
         val_data = DuckietownDataset(self.args["val_split"], self.args)

@@ -177,6 +177,10 @@ class ConvNet(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
         self.conv3 = nn.Conv2d(64, 128, kernel_size=(5, 5), stride=(2, 2), padding=(2, 2))
 
+        self.bn1 = nn.BatchNorm2d(num_features=32, eps=1e-05, momentum=0.1, affine=True)
+        self.bn2 = nn.BatchNorm2d(num_features=64, eps=1e-05, momentum=0.1, affine=True)
+        self.bn3 = nn.BatchNorm2d(num_features=128, eps=1e-05, momentum=0.1, affine=True)
+
         # ReLU layer
         self.relu = nn.ReLU(inplace=True)
 
@@ -190,11 +194,11 @@ class ConvNet(nn.Module):
 
 
     def forward(self, x):
-        x = self.conv1(x)
+        x = self.bn1(self.conv1(x))
         x = self.relu(x)
-        x = self.conv2(x)
+        x = self.bn2(self.conv2(x))
         x = self.relu(x)
-        x = self.conv3(x)
+        x = self.bn3(self.conv3(x))
         x = self.relu(x)
 
         x = x.view(x.size(0), self.o_col * self.o_row * 128)

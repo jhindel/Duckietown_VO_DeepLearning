@@ -25,7 +25,7 @@ class DuckietownDataset(Dataset):
             all_filenames_dir = sorted(next(walk(args["data_dir"] + data_dic["dir"][i]), (None, None, []))[2])
             full_path = np.array(
                 [os.path.join(str(args["data_dir"] + data_dic["dir"][i]), xi) for xi in all_filenames_dir])
-            print(i, data_dic["filenames"][i], gt_file.shape, len(all_filenames_dir))
+            # print(i, data_dic["filenames"][i], gt_file.shape, len(all_filenames_dir))
             gt_file["img"] = full_path
             # only use images with idx
             start_idx = data_dic["idx"][i][0]
