@@ -65,14 +65,14 @@ class DeepVONet(pl.LightningModule):
 
     def train_dataloader(self):
         train_data = DuckietownDataset(self.args["train_split"], self.args)
-        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=4, shuffle=True, drop_last=True)
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True, drop_last=True)
 
     def val_dataloader(self):
         val_data = DuckietownDataset(self.args["val_split"], self.args)
-        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=4, shuffle=False, drop_last=True)
+        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False, drop_last=True)
 
     def test_dataloader(self):
-        return torch.utils.data.DataLoader(self.test_data, batch_size=1, num_workers=4, shuffle=False, drop_last=True)
+        return torch.utils.data.DataLoader(self.test_data, batch_size=1, num_workers=2, shuffle=False, drop_last=True)
 
 
 

@@ -12,7 +12,7 @@ import pytorch_lightning as pl
 from .training import DeepVONet
 from .utils import plot_test
 
-def training_testing(args, wandb_project, visualization=True, wandb_name=None):
+def training_testing(args, wandb_project, visualization=True, wandb_name=None, gpu=True):
     # experiment tracker (you need to sign in with your account)
 
     wandb.require(experiment="service")
@@ -39,7 +39,7 @@ def training_testing(args, wandb_project, visualization=True, wandb_name=None):
         )
 
     trainer = pl.Trainer(
-            # accelerator="gpu",
+            accelerator="gpu",
             strategy="ddp",
             logger=wandb_logger,
             callbacks=checkpoint,
