@@ -39,8 +39,7 @@ def training_testing(args, wandb_project, wandb_name=None):
         )
 
     trainer = pl.Trainer(
-            gpus=1,
-            strategy="ddp",
+            devices=1, accelerator="gpu", strategy="ddp",
             logger=wandb_logger,
             callbacks=checkpoint,
             max_epochs=args["epochs"],
