@@ -41,17 +41,17 @@ test = {"filenames": ['alex_test_complex_2_ground_truth.txt',
 train_dummy = {
     "filenames": ["alex_2small_loops_ground_truth.txt"],
     "dir": ["alex_2small_loops_images"],
-    "idx": [[0, 40]]
+    "idx": [[0, 445]]
 }
 
 val_dummy = {
     "filenames": ["alex_2small_loops_ground_truth.txt"],
     "dir": ["alex_2small_loops_images"],
-    "idx": [[40, 50]]
+    "idx": [[445, 644]]
 }
 
 test_dummy = {
-    "filenames": ["alex_2small_loops_ground_truth.txt"],
-    "dir": ["alex_2small_loops_images"],
-    "idx": [[50, 60]]
+    "filenames": ['alex_3small_loops_ground_truth.txt'],
+    "dir": ['alex_3small_loops_images'],
+    "idx": [[50, 250]]
 }

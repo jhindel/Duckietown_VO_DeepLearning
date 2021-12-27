@@ -34,15 +34,13 @@ class DuckietownDataset(Dataset):
                 end_idx = end_idx - ((end_idx - start_idx) % args["trajectory_length"])
                 # print(start_idx, end_idx)
             gt_file = gt_file.loc[start_idx:end_idx]
-            # print(i, gt_file.shape, start_idx, end_idx)
-            # print(gt_file["img"])
-            # concatenate to final list
             self.data = self.data.append(gt_file, ignore_index=True)
 
         self.trajectory_length = args["trajectory_length"]
         self.transform = transforms.Compose([
             transforms.Resize((args["resize"], args["resize"])),
             transforms.ToTensor(),
+            # TODO implement
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
             # transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
