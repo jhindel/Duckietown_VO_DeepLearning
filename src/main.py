@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import sys
 
 import pytorch_lightning as pl
-from .training import DeepVONet
+from .training import DeepVONet, CTCNet
 from .utils import plot_test
 
 def training_testing(args, wandb_project, wandb_name=None):
@@ -47,7 +47,7 @@ def training_testing(args, wandb_project, wandb_name=None):
             # progress_bar_refresh_rate=2
         )
 
-    model = DeepVONet(args)
+    model = CTCNet(args)
     # log gradients, parameter histogram and model topology
     wandb_logger.watch(model)
 
@@ -63,7 +63,7 @@ def training_testing(args, wandb_project, wandb_name=None):
 
 
 
-def hyperparamter_tuning(args, wandb_project, visualization=False, wandb_name=None):
+def hyperparamter_tuning(args, wandb_project, wandb_name=None):
     hyper_parameter_combinations = list(
         cartProduct(*[args[param] for param in args.keys()]))
     hyper_parameter_set_list = [dict(zip(args.keys(), hyper_parameter_combinations[i])) for i in
@@ -72,7 +72,7 @@ def hyperparamter_tuning(args, wandb_project, visualization=False, wandb_name=No
     evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['train_loss', 'val_loss', 'test_loss'])
     for i, hyper_parameter in enumerate(hyper_parameter_set_list):
         print('%s/%s:  %s' % (i, len(hyper_parameter_set_list), hyper_parameter))
-        results, test_loss = training_testing(hyper_parameter, wandb_project, visualization=visualization, wandb_name=f"{wandb_name}_{i}")
+        results, test_loss = training_testing(hyper_parameter, wandb_project, wandb_name=f"{wandb_name}_{i}")
         hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
                                 'test_loss': test_loss})
         evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)

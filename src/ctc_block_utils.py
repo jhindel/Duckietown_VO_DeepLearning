@@ -7,10 +7,9 @@ def exp_map(pose):
 	theta = pose[:, 2]
 	transformation = torch.zeros((3*pose.shape[0], 3))
 	for i in range(pose.shape[0]):
-		transformation[3*i:3*(i+1), :] = torch.from_numpy(np.array(
-			[[np.cos(theta[i]), -np.sin(theta[i]), x[i]], 
-			[np.sin(theta[i]), np.cos(theta[i]), y[i]],
-			[0, 0, 1]]))
+		transformation[3*i:3*(i+1), :] = torch.tensor([[torch.cos(theta[i]), -torch.sin(theta[i]), x[i]], 
+			                                        [torch.sin(theta[i]), torch.cos(theta[i]), y[i]],
+			                                        [0, 0, 1]])
 	return transformation
 
 def log_map(transformation):
@@ -19,13 +18,15 @@ def log_map(transformation):
 	for i in range(batch_size):
 		pose[i, 0] = transformation[3*i, 2]
 		pose[i, 1] = transformation[3*i + 1, 2]
-		pose[i, 2] = np.arctan2(transformation[3*i + 1, 0], transformation[3*i, 0])
+		pose[i, 2] = torch.atan2(transformation[3*i + 1, 0], transformation[3*i, 0])
 	return pose
 
 def composition(poses):
 	composition_transformation = torch.eye(3).repeat(poses[0].shape[0], 1)
 	for pose in poses:
-		composition_transformation = composition_transformation @ exp_map(pose)
+		exp_pose = exp_map(pose)
+		for i in range(pose.shape[0]):
+		  composition_transformation[3*i:3*(i+1), :] = composition_transformation[3*i:3*(i+1), :] @ exp_pose[3*i:3*(i+1), :]
 	composition_pose = log_map(composition_transformation)
 	return composition_pose
 
@@ -55,7 +56,7 @@ def get_all_compositions(poses, max_step_size=3):
 	return pose_lists
 
 
-test = np.array([[3, 5, -0.1 + 2*np.pi]])
+test = torch.tensor([[3, 5, -0.1 + 2*np.pi]])
 print(test)
 exp_test = exp_map(test)
 print(exp_test)

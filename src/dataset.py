@@ -118,8 +118,7 @@ class DuckietownDatasetCTC(DuckietownDataset):
             data1 = self.data.iloc[i][["x", "y", "theta_correct", "img"]]
             img1 = Image.open(data1["img"]).convert('RGB')
             img1 = self.preprocess(img1)
-
-            images.append(img1)
+            images.append(np.array(img1))
         images = np.asarray(images)
         return images
 
