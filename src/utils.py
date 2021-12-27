@@ -86,3 +86,4 @@ def plot_test(test_data, relative_poses_pred):
     fig.legend()
     wandb.log({"trajectory": wandb.Image(fig)})
     plt.show()
+    print("pred", absolute_poses_pred, "gt", absolute_poses)

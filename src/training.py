@@ -35,6 +35,8 @@ class DeepVONet(pl.LightningModule):
         images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
 
         # TODO check if can vectorize it
+        if type(self.architecture) is ConvLstmNet:
+            self.architecture.reset_hidden_states(bsize=relative_pose.shape[0], zero=True)  # reset to 0 the hidden states of RNN
         for t in range(len(images_stacked)):
             # input (batch_size, 3, 64, 64), output (batch_size, 3)
             # relative_pose_pred:(trajectory_length, batch_size, 3)

@@ -20,7 +20,7 @@ def weights_init(m):
     # TODO pre-trained weights
     classname = m.__class__.__name__
 
-    if classname.find('Conv') != -1:
+    if classname.find('Conv2d') != -1:
         nn.init.kaiming_normal_(m.weight.data)
         nn.init.constant_(m.bias.data, 0)
     elif classname.find('BatchNorm') != -1:
@@ -88,7 +88,7 @@ class ConvLstmNet(nn.Module):
 
     # TODO check but should be done automatically
     # model.reset_hidden_states(bsize=args["bsize"], zero=True, phase=phase)  # reset to 0 the hidden states of RNN
-    def reset_hidden_states(self, bsize=1, zero=True, phase='eval', cpu=False):
+    def reset_hidden_states(self, bsize=32, zero=True, phase='eval', cpu=False):
 
         if zero == True:
             self.hx1 = torch.zeros(bsize, 100)

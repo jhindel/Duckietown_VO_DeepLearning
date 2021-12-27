@@ -11,6 +11,7 @@ import sys
 import pytorch_lightning as pl
 from .training import DeepVONet
 from .utils import plot_test
+from .model import ConvLstmNet
 
 
 def training_testing(args, wandb_project, wandb_name=None):
@@ -87,7 +88,10 @@ def save_model_onnx(model, args):
     # model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
     model.to('cpu')
 
-    x = torch.randn(args["bsize"], 6, args["resize"], args["resize"], requires_grad=False)
+    if type(model) is ConvLstmNet:
+        model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
+
+    x = torch.randn(1, 6, args["resize"], args["resize"], requires_grad=False)
 
     filename = os.path.join(wandb.run.dir,
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
