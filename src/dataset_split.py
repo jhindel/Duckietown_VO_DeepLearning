@@ -55,3 +55,27 @@ test_dummy = {
     "dir": ['alex_3small_loops_images'],
     "idx": [[50, 250]]
 }
+
+train_alex = {"filenames": ['alex_2small_8_retest_ground_truth.txt',
+                       'alex_2small_loops_ground_truth.txt',
+                       'alex_3small_loops_ground_truth.txt',
+                       'alex_train_complex_2_ground_truth.txt'],
+         "dir": ['alex_2small_8_retest_images',
+                 'alex_2small_loops_images',
+                 'alex_3small_loops_images',
+                 'alex_train_complex_2_images'],
+        "idx": [[200, 854], [0, 445], [200, 985], [0, 646]]}
+
+val_alex = {"filenames": ['alex_2small_8_retest_ground_truth.txt',
+                     'alex_2small_loops_ground_truth.txt',
+                     'alex_3small_loops_ground_truth.txt',
+                     'alex_train_complex_2_ground_truth.txt'],
+       "dir": ['alex_2small_8_retest_images',
+               'alex_2small_loops_images',
+               'alex_3small_loops_images',
+               'alex_train_complex_2_images'],
+       "idx": [[0, 200], [445, 644], [0, 200]]}
+
+test_alex = {"filenames": ['alex_test_complex_2_ground_truth.txt'],
+        "dir": ['alex_test_complex_2_images'],
+        "idx": [[0, 783]]}
