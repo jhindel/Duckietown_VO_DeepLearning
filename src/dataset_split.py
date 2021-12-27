@@ -74,7 +74,7 @@ val_alex = {"filenames": ['alex_2small_8_retest_ground_truth.txt',
                'alex_2small_loops_images',
                'alex_3small_loops_images',
                'alex_train_complex_2_images'],
-       "idx": [[0, 200], [445, 644], [0, 200]]}
+       "idx": [[0, 200], [445, 644], [0, 200], [646, 845]]}
 
 test_alex = {"filenames": ['alex_test_complex_2_ground_truth.txt'],
         "dir": ['alex_test_complex_2_images'],
