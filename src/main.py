@@ -60,7 +60,7 @@ def training_testing(args, wandb_project, wandb_name=None):
     plot_test(model.test_data, model.trajectories)
     save_model_onnx(model, args)
 
-    wandb_logger.unwatch(model)
+    # wandb_logger.unwatch(model)
 
 
 def hyperparamter_tuning(args, wandb_project, wandb_name=None):
@@ -89,7 +89,7 @@ def save_model_onnx(model, args):
 
     x = torch.randn(args["bsize"], 6, args["resize"], args["resize"], requires_grad=False)
 
-    filename = os.path.join(args["checkpoint_path"],
+    filename = os.path.join(wandb.run.dir,
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
 
     # Export the model
@@ -103,4 +103,6 @@ def save_model_onnx(model, args):
                       output_names=['output'],  # the model's output names
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
                                     'output': {0: 'batch_size'}})
-    wandb.save(filename)
+
+    # os.path.join(wandb.run.dir, "model.h5")
+    # wandb.save(filename)
