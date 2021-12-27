@@ -2,9 +2,10 @@
 import numpy as np
 import torch
 import pytorch_lightning as pl
-from .loss import DeepVO_loss
+from .loss import DeepVO_loss, CTCNet_loss
 from .model import ConvNet, ConvLstmNet
 from .dataset import DuckietownDataset
+from .ctc_block_utils import get_all_subsequences, get_all_compositions
 
 class DeepVONet(pl.LightningModule):
 
@@ -75,6 +76,56 @@ class DeepVONet(pl.LightningModule):
     def test_dataloader(self):
         return torch.utils.data.DataLoader(self.test_data, batch_size=1, num_workers=2, shuffle=False, drop_last=True)
 
+class CTCNet(DeepVONet):
+    def __init__(self, args):
+        super().__init__(args)
+        self.architecture = args["pretrained_DeepVO_model"]
+        self.noisy_estimator = args["noisy_estimator"]
 
+    def compute_loss(self, batch, training=False):
+        batch = batch.permute(1, 0, 2, 3, 4) # (trajectory_length, batch_size, 3, 64, 64)
 
+        trajectories = get_all_subsequences(batch, args["max_step_size"])
+        poses = []
+        for i in range(batch.shape[0]-1):
+            # do not compute gradients at this point: !!
+            pose = self.architecture(np.concatenate([batch[i], batch[i+1]], axis=1)) # axis=1 ??
+            poses.append(pose)
+        poses_composition = get_all_compositions(poses, args["max_step_size"])
 
+        shape = (len(trajectories), batch.shape[1], 3)
+        poses_direct = []
+        poses_DeepVO = []
+        for trajectory in trajectories:
+            pose_list_direct = []
+            pose_list_DeepVO = []
+            for t in range(trajectory.shape[0]-1):
+                # input (batch_size, 3, 64, 64), output (batch_size, 3)
+                # relative_pose_pred:(trajectory_length, batch_size, 3)
+                stacked_images = np.concatenate([trajectory[t], trajectory[t+1]], axis=1) # axis=1 ??
+                pose_list_direct.append(self.forward(stacked_images))
+                pose_list_DeepVO.append(self.noisy_estimator(stacked_images))
+            poses_direct.append(pose_list_direct)
+            poses_DeepVO.append(pose_list_DeepVO)
+
+        poses_composition = torch.form_numpy(np.asarray(poses_composition)).permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
+        poses_direct = torch.form_numpy(np.asarray(poses_direct)).permute(1, 0, 2)
+        poses_DeepVO = torch.form_numpy(np.asarray(poses_DeepVO)).permute(1, 0, 2)
+
+        loss = CTCNet_loss(poses_DeepVO, poses_composition, poses_direct) # args alpha beta K
+        return loss, pose_direct
+
+    def training_step(self, batch, batch_nb):
+        loss, _ = self.compute_loss(batch)
+        self.log('train_loss', loss, on_step=False, on_epoch=True)
+        return loss
+
+    def validation_step(self, batch, batch_nb):
+        loss, _ = self.compute_loss(batch)
+        self.log('valid_loss', loss, on_step=False, on_epoch=True)
+
+    def test_step(self, batch, batch_nb):
+        loss, relative_pose_predicted = self.compute_loss(batch)
+        self.log('test_loss', loss, on_step=False, on_epoch=True)
+        self.trajectories[batch_nb] = np.array(relative_pose_predicted.cpu().data)
+        return loss

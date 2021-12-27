@@ -101,6 +101,27 @@ class DuckietownDataset(Dataset):
     def get_absolute_poses(self):
         return self.data[["x", "y", "theta_correct"]]
 
+class DuckietownDatasetCTC(DuckietownDataset):
+    def __init__(self, data_dic, args):
+        super().__init__(data_dic, args)
+
+    def __len__(self):
+        return len(self.data) // self.trajectory_length
+
+    def __getitem__(self, idx):
+        images = []
+        
+        # start and end index of trajectory
+        start_idx = idx * self.trajectory_length
+        end_idx = (idx + 1) * self.trajectory_length
+        for i in range(start_idx, end_idx):
+            data1 = self.data.iloc[i][["x", "y", "theta_correct", "img"]]
+            img1 = Image.open(data1["img"]).convert('RGB')
+            img1 = self.preprocess(img1)
+
+            images.append(img1)
+        images = np.asarray(images)
+        return images
 
 if __name__ == "__main__":
 
