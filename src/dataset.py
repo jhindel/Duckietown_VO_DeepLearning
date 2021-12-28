@@ -27,6 +27,7 @@ class DuckietownDataset(Dataset):
                 [os.path.join(str(args["data_dir"] + data_dic["dir"][i]), xi) for xi in all_filenames_dir])
             # print(i, data_dic["filenames"][i], gt_file.shape, len(all_filenames_dir))
             gt_file["img"] = full_path
+            print(data_dic["filenames"][i], data_dic["idx"][i][0], data_dic["idx"][i][0])
             # only use images with idx
             start_idx = data_dic["idx"][i][0]
             end_idx = data_dic["idx"][i][1]
