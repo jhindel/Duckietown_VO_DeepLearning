@@ -82,18 +82,16 @@ class CTCNet(DeepVONet):
         # self.architecture = args["pretrained_DeepVO_model"]
         # self.noisy_estimator = args["noisy_estimator"]
         self.noisy_estimator = self.architecture
-        self.test_data = DuckietownDatasetCTC(self.args["test_split"], self.args)
 
-    def compute_loss(self, batch, training=False):
+    def compute_training_loss(self, batch):
         batch = batch.permute(1, 0, 2, 3, 4) # (trajectory_length, batch_size, 3, 64, 64)
 
         trajectories = get_all_subsequences(batch, self.args["max_step_size"])
         poses = []
         for i in range(batch.shape[0]-1):
             stacked_images = torch.cat((batch[i], batch[i+1]), 1)
-            # stacked_images = stacked_images.cpu().numpy()
-            # do not compute gradients at this point: !!
-            pose = self.architecture(stacked_images) # axis=1 ??
+            # do not compute gradients at this point: ?!
+            pose = self.architecture(stacked_images)
             poses.append(pose)
         poses_composition_lists = get_all_compositions(poses, self.args["max_step_size"])
 
@@ -105,25 +103,23 @@ class CTCNet(DeepVONet):
             poses_composition = torch.zeros(shape)
             for t, elem in enumerate(poses_composition_list):
                 # input (batch_size, 3, 64, 64), output (batch_size, 3)
-                # relative_pose_pred:(trajectory_length, batch_size, 3)
-                stacked_images = torch.cat((trajectory[t], trajectory[t+1]), 1) # axis=1 ??
+                stacked_images = torch.cat((trajectory[t], trajectory[t+1]), 1)
                 poses_direct[t] = self.forward(stacked_images)
                 poses_DeepVO[t] = self.noisy_estimator(stacked_images)
                 poses_composition[t] = elem
-            
             poses_composition = poses_composition.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
             poses_direct = poses_direct.permute(1, 0, 2)
             poses_DeepVO = poses_direct.permute(1, 0, 2)
-        loss += CTCNet_loss(poses_DeepVO, poses_composition, poses_direct)
-        return loss, poses_direct
+            loss += CTCNet_loss(poses_DeepVO, poses_composition, poses_direct, K=self.args["K"], alpha=self.args["alpha"], beta=self.args["beta"])
+        return loss
 
     def training_step(self, batch, batch_nb):
-        loss, _ = self.compute_loss(batch)
+        loss = self.compute_training_loss(batch)
         self.log('train_loss', loss, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_nb):
-        loss, _ = self.compute_loss(batch)
+        loss = self.compute_training_loss(batch)
         self.log('valid_loss', loss, on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_nb):

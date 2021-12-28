@@ -47,7 +47,11 @@ def training_testing(args, wandb_project, wandb_name=None):
             # progress_bar_refresh_rate=2
         )
 
-    model = CTCNet(args)
+    if args["CTC"]:
+        model = CTCNet(args)
+    else:
+        model = DeepVONet(args)
+    
     # log gradients, parameter histogram and model topology
     wandb_logger.watch(model)
 
