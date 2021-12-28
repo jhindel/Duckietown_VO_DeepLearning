@@ -91,9 +91,12 @@ def save_model_onnx(model, args):
     # model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
     model.to('cpu')
 
-    x = torch.randn(args["bsize"], 3, args["resize"], args["resize"], requires_grad=False)
+    if type(model) is ConvLstmNet:
+        model.reset_hidden_states(bsize=args["bsize"], zero=True)  # reset to 0 the hidden states of RNN
 
-    filename = os.path.join(args["checkpoint_path"],
+    x = torch.randn(1, 6, args["resize"], args["resize"], requires_grad=False)
+
+    filename = os.path.join(wandb.run.dir,
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
 
     # Export the model
@@ -107,6 +110,7 @@ def save_model_onnx(model, args):
                       output_names=['output'],  # the model's output names
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
                                     'output': {0: 'batch_size'}})
-    wandb.save(filename)
 
-
+    torch.save(model.state_dict(), args["model_name"])
+    # os.path.join(wandb.run.dir, "model.h5")
+    # wandb.save(filename)

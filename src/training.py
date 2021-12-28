@@ -79,9 +79,13 @@ class DeepVONet(pl.LightningModule):
 class CTCNet(DeepVONet):
     def __init__(self, args):
         super().__init__(args)
-        # self.architecture = args["pretrained_DeepVO_model"]
-        # self.noisy_estimator = args["noisy_estimator"]
-        self.noisy_estimator = self.architecture
+        if args["model"] == "ConvNet":
+            self.noisy_estimator = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvLstmNet":
+            self.noisy_estimator = ConvLstmNet(args["resize"], args["dropout_p"])
+        self.architecture.load_state_dict(toch.load(args["pretrained_DeepVO_model_path"]))
+        self.noisy_estimator.load_state_dict(torch.load(args["noisy_estimator_path"]))
+        # self.noisy_estimator = self.architecture
 
     def compute_training_loss(self, batch):
         batch = batch.permute(1, 0, 2, 3, 4) # (trajectory_length, batch_size, 3, 64, 64)
@@ -109,7 +113,7 @@ class CTCNet(DeepVONet):
                 poses_composition[t] = elem
             poses_composition = poses_composition.permute(1, 0, 2)  # (batch_size, trajectory_length, 3)
             poses_direct = poses_direct.permute(1, 0, 2)
-            poses_DeepVO = poses_direct.permute(1, 0, 2)
+            poses_DeepVO = poses_DeepVO.permute(1, 0, 2)
             loss += CTCNet_loss(poses_DeepVO, poses_composition, poses_direct, K=self.args["K"], alpha=self.args["alpha"], beta=self.args["beta"])
         return loss
 
