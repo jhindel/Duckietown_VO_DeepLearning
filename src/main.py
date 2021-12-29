@@ -11,6 +11,7 @@ import sys
 import pytorch_lightning as pl
 from .training import DeepVONet, CTCNet
 from .utils import plot_test
+from .model import ConvLstmNet
 
 def training_testing(args, wandb_project, wandb_name=None):
     # experiment tracker (you need to sign in with your account)
@@ -63,7 +64,7 @@ def training_testing(args, wandb_project, wandb_name=None):
     plot_test(model.test_data, model.trajectories)
     save_model_onnx(model, args)
 
-    wandb_logger.unwatch(model)
+    # wandb_logger.unwatch(model)
 
 
 
