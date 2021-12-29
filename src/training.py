@@ -1,10 +1,10 @@
-
 import numpy as np
 import torch
 import pytorch_lightning as pl
 from .loss import DeepVO_loss
 from .model import ConvNet, ConvLstmNet, ConvNet2
 from .dataset import DuckietownDataset
+
 
 class DeepVONet(pl.LightningModule):
 
@@ -38,7 +38,8 @@ class DeepVONet(pl.LightningModule):
 
         # TODO check if can vectorize it
         if type(self.architecture) is ConvLstmNet:
-            self.architecture.reset_hidden_states(bsize=relative_pose.shape[0], zero=True)  # reset to 0 the hidden states of RNN
+            self.architecture.reset_hidden_states(bsize=relative_pose.shape[0],
+                                                  zero=True)  # reset to 0 the hidden states of RNN
         for t in range(len(images_stacked)):
             # input (batch_size, 3, 64, 64), output (batch_size, 3)
             # relative_pose_pred:(trajectory_length, batch_size, 3)
@@ -66,19 +67,18 @@ class DeepVONet(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        return torch.optim.Adam(self.architecture.parameters(), lr=self.args["lr"], weight_decay=self.args["weight_decay"])
+        return torch.optim.Adam(self.architecture.parameters(), lr=self.args["lr"],
+                                weight_decay=self.args["weight_decay"])
 
     def train_dataloader(self):
         train_data = DuckietownDataset(self.args["train_split"], self.args)
-        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False, drop_last=True)
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True,
+                                           drop_last=True)
 
     def val_dataloader(self):
         val_data = DuckietownDataset(self.args["val_split"], self.args)
-        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False, drop_last=True)
+        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True,
+                                           drop_last=True)
 
     def test_dataloader(self):
         return torch.utils.data.DataLoader(self.test_data, batch_size=1, num_workers=2, shuffle=False, drop_last=True)
-
-
-
-

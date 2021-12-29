@@ -119,7 +119,6 @@ class ConvLstmNet(nn.Module):
             self.hx2 = self.hx2.cpu()
             self.cx2 = self.cx2.cpu()
 
-
     def forward(self, x):
 
         x = self.dropout(x)
@@ -160,6 +159,7 @@ class ConvLstmNet(nn.Module):
 
         return x
 
+
 class ConvNet(nn.Module):
 
     def __init__(self, size, dropout):
@@ -167,7 +167,6 @@ class ConvNet(nn.Module):
         self.i_col = size // 2
         self.i_row = size
         self.dropout_p = dropout
-
 
         self.o_col = oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2)
         self.o_row = oc(oc(oc(self.i_row, 7, 3, 2), 5, 2, 2), 3, 1, 2)
@@ -191,7 +190,6 @@ class ConvNet(nn.Module):
         # Dropout layers
         # self.dropout = nn.Dropout2d(p=0.8)
         self.dropout_hidden = nn.Dropout(p=self.dropout_p)  # default p = 0.5
-
 
     def forward(self, x):
         x = self.bn1(self.conv1(x))
@@ -218,7 +216,6 @@ class ConvNet2(nn.Module):
         self.i_row = size
         self.dropout_p = dropout
 
-
         self.o_col = oc(oc(oc(oc(oc(self.i_col, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
                         3, 1, 2)
         self.o_row = oc(oc(oc(oc(oc(self.i_row, 7, 3, 2), 5, 2, 2), 5, 2, 2), 3, 1, 1),
@@ -243,7 +240,6 @@ class ConvNet2(nn.Module):
         self.dropout = nn.Dropout2d(p=0.8)
         self.dropout_hidden = nn.Dropout(p=self.dropout_p)  # default p = 0.5
 
-
     def forward(self, x):
         x = self.dropout(x)
         x = self.conv1(x)
@@ -265,4 +261,3 @@ class ConvNet2(nn.Module):
         x = self.dense3(x)
 
         return x
-
