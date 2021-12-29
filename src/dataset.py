@@ -44,7 +44,7 @@ class DuckietownDataset(Dataset):
             # TODO implement
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
-            # transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
+            transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
         ])
         self.camera_correction = args["camera-correction"]
         print("final shape", self.data.shape, "batches", (len(self.data) - 1) // self.trajectory_length,
