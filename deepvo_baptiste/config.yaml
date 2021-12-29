@@ -4,11 +4,5 @@ agent_base: "duckietown_baseline"
 ws_dir: "solution" # directory that contains the code the user needs to see
 agent_run_cmd: "run_all.sh" # the script in "launchers" to run the agent with
 ros: true
-challenge: mooc-objdet
 
-
-files:
-  - notebook:
-      package_name: "solution/src/DeepVo/src"
-      name: "DeepVo_activity"
 
