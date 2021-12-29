@@ -106,7 +106,8 @@ def save_model_onnx(model, args):
                       input_names=['input'],  # the model's input names
                       output_names=['output'],  # the model's output names
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
-                                    'output': {0: 'batch_size'}})
+                                    'output': {0: 'batch_size'}},
+                      operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK)
 
     # os.path.join(wandb.run.dir, "model.h5")
     # wandb.save(filename)
