@@ -73,9 +73,9 @@ def hyperparamter_tuning(args, wandb_project, wandb_name=None):
     evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['train_loss', 'val_loss', 'test_loss'])
     for i, hyper_parameter in enumerate(hyper_parameter_set_list):
         print('%s/%s:  %s' % (i, len(hyper_parameter_set_list), hyper_parameter))
-        results, test_loss = training_testing(hyper_parameter, wandb_project, wandb_name=f"{wandb_name}_{i}")
-        hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
-                                'test_loss': test_loss})
+        training_testing(hyper_parameter, wandb_project, wandb_name=f"{wandb_name}_{i}")
+        # hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
+        #                        'test_loss': test_loss})
         evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)
     evaluation_overview.to_csv('model_evaluation_all.csv')
 
@@ -88,11 +88,10 @@ def save_model_onnx(model, args):
     # model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
     model.to('cpu')
 
-    if type(model) is ConvLstmNet:
-        print("moving hidden states")
-        model.reset_hidden_states(bsize=args["bsize"], zero=True, cpu=True)  # reset to 0 the hidden states of RNN
+    if type(model.architecture) is ConvLstmNet:
+        model.architecture.reset_hidden_states(bsize=args["bsize"], zero=True, cpu=True)  # reset to 0 the hidden states of RNN
 
-    x = torch.randn(1, 6, args["resize"] // 2, args["resize"], requires_grad=False)
+    x = torch.randn(args["bsize"], 6, args["resize"] // 2, args["resize"], requires_grad=False)
 
     filename = os.path.join(wandb.run.dir,
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
