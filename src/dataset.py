@@ -5,10 +5,10 @@ import numpy as np
 from torchvision import transforms
 import pandas as pd
 from PIL import Image
-from .utils import absolute2relative
+from src.utils import absolute2relative
 import matplotlib.pyplot as plt
 
-from .dataset_split import train_dummy, val_dummy, test_dummy
+from src.dataset_split import train_dummy, val_dummy, test_dummy
 
 pd.set_option("max_colwidth", None)
 
@@ -39,7 +39,7 @@ class DuckietownDataset(Dataset):
 
         self.trajectory_length = args["trajectory_length"]
         self.transform = transforms.Compose([
-            transforms.Resize((args["resize"], args["resize"])),
+            transforms.Resize((args["resize"] // 2, args["resize"])),
             transforms.ToTensor(),
             # TODO implement
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
@@ -95,6 +95,7 @@ class DuckietownDataset(Dataset):
         area = (0, 160, 640, 480)
         img = img.crop(area)
         img = self.transform(img)
+        # plt.imshow(img.permute(1, 2, 0))
         return img
 
     def get_absolute_poses(self):
