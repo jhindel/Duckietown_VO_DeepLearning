@@ -112,6 +112,6 @@ def save_model_onnx(model, args):
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
                                     'output': {0: 'batch_size'}})
 
-    torch.save(model.state_dict(), args["model_name"])
+    torch.save(model.architecture.state_dict(), args["model_name"])
     # os.path.join(wandb.run.dir, "model.h5")
     # wandb.save(filename)

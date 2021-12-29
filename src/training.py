@@ -83,7 +83,7 @@ class CTCNet(DeepVONet):
             self.noisy_estimator = ConvNet(args["resize"], args["dropout_p"])
         elif args["model"] == "ConvLstmNet":
             self.noisy_estimator = ConvLstmNet(args["resize"], args["dropout_p"])
-        self.architecture.load_state_dict(toch.load(args["pretrained_DeepVO_model_path"]))
+        self.architecture.load_state_dict(torch.load(args["pretrained_DeepVO_model_path"]))
         self.noisy_estimator.load_state_dict(torch.load(args["noisy_estimator_path"]))
         self.noisy_estimator.eval()
         for params in self.noisy_estimator.parameters():
