@@ -5,10 +5,10 @@ import numpy as np
 from torchvision import transforms
 import pandas as pd
 from PIL import Image
-from src.utils import absolute2relative
+from .utils import absolute2relative
 import matplotlib.pyplot as plt
 
-from src.dataset_split import train_dummy, val_dummy, test_dummy
+from .dataset_split import train_dummy, val_dummy, test_dummy
 
 pd.set_option("max_colwidth", None)
 
