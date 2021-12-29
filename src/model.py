@@ -37,7 +37,7 @@ class ConvLstmNet(nn.Module):
 
         super().__init__()
 
-        self.i_col = size
+        self.i_col = size // 2
         self.i_row = size
         self.dropout_p = dropout_p
 
@@ -164,7 +164,7 @@ class ConvNet(nn.Module):
 
     def __init__(self, size, dropout):
         super().__init__()
-        self.i_col = size
+        self.i_col = size // 2
         self.i_row = size
         self.dropout_p = dropout
 
@@ -214,7 +214,7 @@ class ConvNet2(nn.Module):
 
     def __init__(self, size, dropout):
         super().__init__()
-        self.i_col = size
+        self.i_col = size // 2
         self.i_row = size
         self.dropout_p = dropout
 
