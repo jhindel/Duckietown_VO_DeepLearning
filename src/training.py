@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import pytorch_lightning as pl
 from .loss import DeepVO_loss
-from .model import ConvNet, ConvLstmNet
+from .model import ConvNet, ConvLstmNet, ConvNet2
 from .dataset import DuckietownDataset
 
 class DeepVONet(pl.LightningModule):
@@ -14,6 +14,8 @@ class DeepVONet(pl.LightningModule):
         super().__init__()
         if args["model"] == "ConvNet":
             self.architecture = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvNet2":
+            self.architecture = ConvNet2(args["resize"], args["dropout_p"])
         elif args["model"] == "ConvLstmNet":
             self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
         self.args = args

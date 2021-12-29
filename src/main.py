@@ -91,7 +91,7 @@ def save_model_onnx(model, args):
     if type(model) is ConvLstmNet:
         model.reset_hidden_states(bsize=args["bsize"], zero=True, cpu=True)  # reset to 0 the hidden states of RNN
 
-    x = torch.randn(1, 6, args["resize"], args["resize"], requires_grad=False)
+    x = torch.randn(1, 6, args["resize"] // 2, args["resize"], requires_grad=False)
 
     filename = os.path.join(wandb.run.dir,
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
