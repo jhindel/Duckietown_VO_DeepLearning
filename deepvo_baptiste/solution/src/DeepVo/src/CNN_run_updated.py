@@ -46,27 +46,21 @@ def display_images(img):
     ax1.set_title('Image 2')
     fig.show()
 
-def CNN_processing(img)
-	image2=image1
-	image1=img
-	if not (image2):
-	#TODO skip the first time if it's the first image to the input
-		return #empty
-	else:
-		input_to_CNN = preprocess_pose(image1, image2)
-		#display_images(input_to_CNN) #Optional if we would want to see the pics
+def CNN_processing(img1,img2)
+	input_to_CNN = preprocess_pose(image1, image2)
+	#display_images(input_to_CNN) #Optional if we would want to see the pics
 		
-		model_path = '/home/baptiste/Downloads/deepvo/solution/src/DeepVo/2021-12-27-16-43_bestmodel.onnx'
-		onnx_model = onnx.load(model_path)
+	model_path = '/home/baptiste/Downloads/deepvo/solution/src/DeepVo/2021-12-27-16-43_bestmodel.onnx'
+	onnx_model = onnx.load(model_path)
 
-		# Check the model
-		onnx.checker.check_model(onnx_model)
+	# Check the model
+	onnx.checker.check_model(onnx_model)
 
-		# Run model
-		session = rt.InferenceSession(model_path)
-		outputs = session.run(None, {'input': input_to_CNN})
+	# Run model
+	session = rt.InferenceSession(model_path)
+	outputs = session.run(None, {'input': input_to_CNN})
 
-		return outputs #TODO Define the output values of ONNX file
+	return outputs #TODO Define the output values of ONNX file
 	
 
 

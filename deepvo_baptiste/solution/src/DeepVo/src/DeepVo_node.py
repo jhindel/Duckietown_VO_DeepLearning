@@ -109,12 +109,14 @@ class DeepVoNode(DTROS):
             old_img = image
             image = image[...,::-1].copy()  # image is bgr, flip it to rgb
 
-        old_image = cv2.resize(old_img, (416,416))
-        image = cv2.resize(image, (416,416))
+        old_image = cv2.resize(old_img, (64,64))
+        image = cv2.resize(image, (64,64))
 
         #Put image source to self memory image
-        image1 = self.bridge.cv2_to_imgmsg(old_image, encoding="bgr8")
-        image2 = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
+        #image1 = self.bridge.cv2_to_imgmsg(old_image, encoding="bgr8")
+        #image2 = self.bridge.cv2_to_imgmsg(image, encoding="bgr8")
+        image1=Image.fromarray(cv2.cvtColot(old_image,cv2.COLOR_BGR2RGB))
+        image2=Image.fromarray(cv2.cvtColot(image,cv2.COLOR_BGR2RGB))
 
     	CNN_results=CNN_run_updated.CNN_processing(image1,image2)
         
