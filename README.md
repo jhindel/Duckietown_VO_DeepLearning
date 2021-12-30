@@ -1,4 +1,4 @@
 # Duckietown_DeepVO
-#BANCEL Baptiste
-#BRUCKER Adrian
-#HINDEL Julia
+Bancel Baptiste
+Brucker Adrian
+Hindel Julia
