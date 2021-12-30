@@ -101,7 +101,7 @@ if __name__ == "__main__":
             "train_split": train_dummy, "val_split": val_dummy, "test_split": test_dummy,
             "checkpoint_path": './checkpoint', "checkpoint": None, "bsize": 2, "lr": 0.001,
             "weight_decay": 1e-4, "trajectory_length": 5, "dropout_p": 0.85,
-            "resize": 64, "K": 100, "epochs": 5, "patience": 40, "camera-correction": True}
+            "resize": 64, "K": 100, "epochs": 5, "patience": 40}
 
     test_dataset = DuckietownDataset(args["train_split"], args)
 
