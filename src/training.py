@@ -68,14 +68,14 @@ class DeepVONet(pl.LightningModule):
                                 weight_decay=self.args["weight_decay"])
 
     def train_dataloader(self):
-        print("no shuffle")
+        print("shuffle")
         train_data = DuckietownDataset(self.args["train_split"], self.args)
-        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False,
+        return torch.utils.data.DataLoader(train_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True,
                                            drop_last=True)
 
     def val_dataloader(self):
         val_data = DuckietownDataset(self.args["val_split"], self.args)
-        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=2, shuffle=False,
+        return torch.utils.data.DataLoader(val_data, batch_size=self.args["bsize"], num_workers=2, shuffle=True,
                                            drop_last=True)
 
     def test_dataloader(self):
