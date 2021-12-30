@@ -41,7 +41,7 @@ class DuckietownDataset(Dataset):
 
         self.trajectory_length = args["trajectory_length"]
         self.transform = transforms.Compose([
-            transforms.Resize((args["resize"], args["resize"])),
+            transforms.Resize((args["resize"] // 2, args["resize"])),
             transforms.ToTensor(),
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed

@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import pytorch_lightning as pl
 from .loss import DeepVO_loss, CTCNet_loss
-from .model import ConvNet, ConvLstmNet
+from .model import ConvNet, ConvNet2, ConvLstmNet
 from .dataset import DuckietownDataset, DuckietownDatasetCTC
 from .ctc_block_utils import get_all_subsequences, get_all_compositions
 
@@ -15,6 +15,8 @@ class DeepVONet(pl.LightningModule):
         super().__init__()
         if args["model"] == "ConvNet":
             self.architecture = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvNet2":
+            self.architecture = ConvNet2(args["resize"], args["dropout_p"])
         elif args["model"] == "ConvLstmNet":
             self.architecture = ConvLstmNet(args["resize"], args["dropout_p"])
         self.args = args
@@ -81,6 +83,8 @@ class CTCNet(DeepVONet):
         super().__init__(args)
         if args["model"] == "ConvNet":
             self.noisy_estimator = ConvNet(args["resize"], args["dropout_p"])
+        elif args["model"] == "ConvNet2":
+            self.noisy_estimator = ConvNet2(args["resize"], args["dropout_p"])
         elif args["model"] == "ConvLstmNet":
             self.noisy_estimator = ConvLstmNet(args["resize"], args["dropout_p"])
         self.architecture.load_state_dict(torch.load(args["pretrained_DeepVO_model_path"]))
