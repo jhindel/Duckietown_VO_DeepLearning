@@ -1,1 +1,4 @@
-# duckietown_visual_odometry
+# Duckietown_DeepVO
+#BANCEL Baptiste
+#BRUCKER Adrian
+#HINDEL Julia

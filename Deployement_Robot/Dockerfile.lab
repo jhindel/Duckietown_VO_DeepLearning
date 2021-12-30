@@ -1,0 +1,11 @@
+ARG DOCKER_REGISTRY=docker.io
+ARG REPO_name="Deployement_Robot"
+FROM ${DOCKER_REGISTRY}/duckietown/dt-gui-tools:daffy-amd64
+
+RUN python3 -m pip install -U \
+	aido-protocols-daffy
+
+COPY assets/vnc/image/root/Desktop/. /root/Desktop/
+COPY assets/vnc/image/root/Documents/ /root/Documents/
+
+
