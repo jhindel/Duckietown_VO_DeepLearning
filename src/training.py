@@ -8,8 +8,6 @@ from .dataset import DuckietownDataset
 
 class DeepVONet(pl.LightningModule):
 
-    # TODO patience
-
     def __init__(self, args):
         super().__init__()
         if args["model"] == "ConvNet":
@@ -36,7 +34,6 @@ class DeepVONet(pl.LightningModule):
         relative_pose_pred = relative_pose_pred.type_as(relative_pose)
         images_stacked = images_stacked.permute(1, 0, 2, 3, 4)  # (trajectory_length, batch_size, 3,64,64)
 
-        # TODO check if can vectorize it
         if type(self.architecture) is ConvLstmNet:
             self.architecture.reset_hidden_states(bsize=relative_pose.shape[0],
                                                   zero=True)  # reset to 0 the hidden states of RNN

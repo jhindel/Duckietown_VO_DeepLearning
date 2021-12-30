@@ -1,13 +1,7 @@
 import torch
 import torch.nn as nn
 import math
-import wandb
-
-from torch.autograd import Variable
 from torch.nn.init import calculate_gain
-import pytorch_lightning as pl
-from .loss import DeepVO_loss
-from .dataset import DuckietownDataset
 
 
 # Count output size, given the input size, the kernel size, the padding and the stride
@@ -17,7 +11,6 @@ def oc(inp, k, p, s):
 
 # Initialize neural network layers according to their type
 def weights_init(m):
-    # TODO pre-trained weights
     classname = m.__class__.__name__
 
     if classname.find('Conv2d') != -1:
@@ -86,8 +79,7 @@ class ConvLstmNet(nn.Module):
         self.apply(weights_init)
         self.reset_hidden_states()
 
-    # TODO check but should be done automatically
-    # model.reset_hidden_states(bsize=args["bsize"], zero=True, phase=phase)  # reset to 0 the hidden states of RNN
+    # reset to 0 the hidden states of RNN
     def reset_hidden_states(self, bsize=32, zero=True, phase='eval', cpu=False):
 
         if zero == True:

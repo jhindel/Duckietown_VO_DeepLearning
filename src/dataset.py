@@ -41,7 +41,6 @@ class DuckietownDataset(Dataset):
         self.transform = transforms.Compose([
             transforms.Resize((args["resize"] // 2, args["resize"])),
             transforms.ToTensor(),
-            # TODO implement
             # transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
             # The following means and stds have been pre-computed
             # transforms.Normalize(mean=[0.424, 0.459, 0.218], std=[0.224, 0.215, 0.158])
@@ -54,9 +53,6 @@ class DuckietownDataset(Dataset):
         return (len(self.data) - 1) // self.trajectory_length
 
     def __getitem__(self, idx):
-
-        # print("batch no", idx)
-
         images_stacked = []
         rel_poses = []
         # start and end index of trajectory
@@ -91,11 +87,9 @@ class DuckietownDataset(Dataset):
         return images_stacked, rel_poses
 
     def preprocess(self, img):
-        # TODO add camera correction here
         area = (0, 160, 640, 480)
         img = img.crop(area)
         img = self.transform(img)
-        # plt.imshow(img.permute(1, 2, 0))
         return img
 
     def get_absolute_poses(self):

@@ -1,12 +1,8 @@
 import torch
-from itertools import product as cartProduct
-import pandas as pd
 import os
 import wandb
 import time
 import datetime
-import matplotlib.pyplot as plt
-import sys
 
 import pytorch_lightning as pl
 from .training import DeepVONet
@@ -45,8 +41,6 @@ def training_testing(args, wandb_project, wandb_name=None):
         logger=wandb_logger,
         callbacks=checkpoint,
         max_epochs=args["epochs"],
-        # log_every_n_steps=50,
-        # progress_bar_refresh_rate=2
     )
 
     model = DeepVONet(args)
@@ -61,31 +55,15 @@ def training_testing(args, wandb_project, wandb_name=None):
     plot_test(model.test_data, model.trajectories)
     save_model_onnx(model, args)
 
-    # wandb_logger.unwatch(model)
-
-
-def hyperparamter_tuning(args, wandb_project, wandb_name=None):
-    hyper_parameter_combinations = list(
-        cartProduct(*[args[param] for param in args.keys()]))
-    hyper_parameter_set_list = [dict(zip(args.keys(), hyper_parameter_combinations[i])) for i in
-                                range(len(hyper_parameter_combinations))]
-
-    evaluation_overview = pd.DataFrame(columns=list(args.keys()) + ['train_loss', 'val_loss', 'test_loss'])
-    for i, hyper_parameter in enumerate(hyper_parameter_set_list):
-        print('%s/%s:  %s' % (i, len(hyper_parameter_set_list), hyper_parameter))
-        training_testing(hyper_parameter, wandb_project, wandb_name=f"{wandb_name}_{i}")
-        # hyper_parameter.update({'train_loss': results['train_loss'][-1], 'val_loss': results['val_loss'][-1],
-        #                        'test_loss': test_loss})
-        evaluation_overview = evaluation_overview.append(hyper_parameter, ignore_index=True)
-    evaluation_overview.to_csv('model_evaluation_all.csv')
-
 
 def save_model_onnx(model, args):
     # convert model to onnx
 
     # set the model to inference mode
     model.eval()
-    # model.reset_hidden_states(args["bsize"], zero=True, cpu=True)
+    torch.save(model.architecture.state_dict(), args["model_name"])
+    wandb.save(args["model_name"])
+
     model.to('cpu')
 
     if type(model.architecture) is ConvLstmNet:
@@ -97,7 +75,7 @@ def save_model_onnx(model, args):
                             f"{datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d-%H-%M')}_bestmodel.onnx")
 
     # Export the model
-    torch.onnx.export(model,  # model being run
+    torch.onnx.export(model.architecture,  # model being run
                       x,  # model input (or a tuple for multiple inputs)
                       filename,  # where to save the model (can be a file or file-like object)
                       export_params=True,  # store the trained parameter weights inside the model file
@@ -108,6 +86,3 @@ def save_model_onnx(model, args):
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
                                     'output': {0: 'batch_size'}},
                       operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK)
-
-    # os.path.join(wandb.run.dir, "model.h5")
-    # wandb.save(filename)
