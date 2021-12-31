@@ -5,7 +5,7 @@ import time
 import datetime
 
 import pytorch_lightning as pl
-from .training import DeepVONet
+from .training import DeepVONet, CTCNet
 from .utils import plot_test
 from .model import ConvLstmNet
 
@@ -43,7 +43,11 @@ def training_testing(args, wandb_project, wandb_name=None):
         max_epochs=args["epochs"],
     )
 
-    model = DeepVONet(args)
+    if args["CTC"]:
+        model = CTCNet(args)
+    else:
+        model = DeepVONet(args)
+    
     # log gradients, parameter histogram and model topology
     wandb_logger.watch(model)
 
@@ -86,3 +90,5 @@ def save_model_onnx(model, args):
                       dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
                                     'output': {0: 'batch_size'}},
                       operator_export_type=torch.onnx.OperatorExportTypes.ONNX_ATEN_FALLBACK)
+
+    torch.save(model.architecture.state_dict(), args["model_name"])
