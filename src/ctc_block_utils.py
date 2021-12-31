@@ -8,8 +8,8 @@ def exp_map(pose):
 	transformation = torch.zeros((3*pose.shape[0], 3))
 	for i in range(pose.shape[0]):
 		transformation[3*i:3*(i+1), :] = torch.tensor([[torch.cos(theta[i]), -torch.sin(theta[i]), x[i]], 
-			                                        [torch.sin(theta[i]), torch.cos(theta[i]), y[i]],
-			                                        [0, 0, 1]])
+			                                     	   [torch.sin(theta[i]), torch.cos(theta[i]), y[i]],
+			                                      	   [0, 0, 1]])
 	return transformation
 
 def log_map(transformation):
@@ -54,11 +54,3 @@ def get_all_compositions(poses, max_step_size=3):
 	for i in range(2, max_step_size+1):
 		pose_lists += get_compositions(poses, i)
 	return pose_lists
-
-
-test = torch.tensor([[3, 5, -0.1 + 2*np.pi]])
-print(test)
-exp_test = exp_map(test)
-print(exp_test)
-log_exp_test = log_map(exp_test)
-print(log_exp_test)

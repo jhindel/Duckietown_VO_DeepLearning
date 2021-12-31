@@ -92,10 +92,9 @@ class CTCNet(DeepVONet):
         self.noisy_estimator.eval()
         for params in self.noisy_estimator.parameters():
             params.requires_grad = False
-        # self.noisy_estimator = self.architecture
 
     def compute_training_loss(self, batch):
-        batch = batch.permute(1, 0, 2, 3, 4) # (trajectory_length, batch_size, 3, 64, 64)
+        batch = batch.permute(1, 0, 2, 3, 4) # (trajectory_length, batch_size, 3, 32, 64)
 
         trajectories = get_all_subsequences(batch, self.args["max_step_size"])
         poses = []
@@ -113,7 +112,6 @@ class CTCNet(DeepVONet):
             poses_DeepVO = torch.zeros(shape)
             poses_composition = torch.zeros(shape)
             for t, elem in enumerate(poses_composition_list):
-                # input (batch_size, 3, 64, 64), output (batch_size, 3)
                 stacked_images = torch.cat((trajectory[t], trajectory[t+1]), 1)
                 poses_direct[t] = self.forward(stacked_images)
                 poses_DeepVO[t] = self.noisy_estimator(stacked_images)
